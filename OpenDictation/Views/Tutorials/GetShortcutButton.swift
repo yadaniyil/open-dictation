@@ -62,20 +62,6 @@ struct SmallPillButtonStyle: ButtonStyle {
     }
 }
 
-/// Opens the Settings app. iOS only lets an app open its own page there.
-struct OpenSettingsButton: View {
-    @Environment(\.openURL) private var openURL
-
-    var body: some View {
-        Button("Open Settings") {
-            if let settings = URL(string: UIApplication.openSettingsURLString) { openURL(settings) }
-        }
-        .buttonStyle(SmallPillButtonStyle())
-        .accessibilityHint("Opens this app's page in Settings. Go back from there to the main list.")
-        .accessibilityIdentifier("openSettings")
-    }
-}
-
 #Preview {
     NavigationStack {
         GetShortcutButton { Text("Get the shortcut") }

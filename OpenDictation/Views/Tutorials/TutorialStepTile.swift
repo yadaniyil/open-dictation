@@ -50,8 +50,6 @@ struct TutorialStepTile: View {
                 .buttonStyle(SmallPillButtonStyle())
                 .accessibilityLabel("Get the shortcut")
                 .accessibilityIdentifier("getShortcut")
-        case .openSettings:
-            OpenSettingsButton()
         case nil:
             EmptyView()
         }

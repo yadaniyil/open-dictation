@@ -40,9 +40,8 @@ struct Tutorial: Identifiable, Sendable {
             TutorialStep(
                 picture: .list(highlighted: 1),
                 pictureDescription: "The Settings list. The Action Button row has a frame around it.",
-                text: "Settings, then Action Button.",
-                screenshot: .settingsActionButtonRow,
-                action: .openSettings),
+                text: "Open the Settings app. Tap Action Button.",
+                screenshot: .settingsActionButtonRow),
             TutorialStep(
                 picture: .actionPicker,
                 pictureDescription: "The Action Button screen showing Shortcut. The Choose a Shortcut button has a frame around it.",
@@ -204,9 +203,8 @@ struct TutorialScreenshot: Sendable {
 enum TutorialStepAction: Sendable {
     /// Opens the ready-made shortcut in the Shortcuts app.
     case getShortcut
-    /// Opens the Settings app. iOS only lets an app open its own page there, so the user
-    /// still goes back to the main list to find Action Button.
-    case openSettings
+    // There is no "open Settings" here on purpose. iOS only lets an app open its own page in
+    // Settings, two levels away from the main list, which sent users to the wrong place.
 }
 
 /// The small pictures of the places a dictation can be started from. `TutorialGlyphView` draws them.
