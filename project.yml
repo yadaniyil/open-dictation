@@ -17,8 +17,7 @@ settings:
     CODE_SIGN_STYLE: Automatic
     SWIFT_VERSION: "6.0"
     MARKETING_VERSION: "1.0"
-    CURRENT_PROJECT_VERSION: "9"
-    TARGETED_DEVICE_FAMILY: "1"
+    CURRENT_PROJECT_VERSION: "10"
     ENABLE_USER_SCRIPT_SANDBOXING: YES
 
 # Exact pins: both libraries change their model handling between releases.
@@ -51,8 +50,8 @@ targets:
         ITSAppUsesNonExemptEncryption: false
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
-        # An iPhone app can still be opened on an iPad, and the App Store refuses an upload
-        # (error 90474) unless every orientation is allowed there.
+        # Not used while the app is iPhone only. An app that supports the iPad must allow every
+        # orientation there, or the App Store refuses the upload (error 90474).
         UISupportedInterfaceOrientations~ipad:
           - UIInterfaceOrientationPortrait
           - UIInterfaceOrientationPortraitUpsideDown
@@ -61,6 +60,9 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: dev.yako.open-dictation
+        # iPhone only. It has to be said on each target: XcodeGen gives every iOS target
+        # "1,2" (iPhone and iPad) by itself, and a target's own setting wins over the project's.
+        TARGETED_DEVICE_FAMILY: "1"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
         SWIFT_ACTIVE_COMPILATION_CONDITIONS: $(inherited) APP_TARGET
@@ -86,6 +88,7 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: dev.yako.open-dictation.widgets
+        TARGETED_DEVICE_FAMILY: "1"
 
   OpenDictationTests:
     type: bundle.unit-test
@@ -95,6 +98,7 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: dev.yako.open-dictation.tests
+        TARGETED_DEVICE_FAMILY: "1"
         GENERATE_INFOPLIST_FILE: YES
         BUNDLE_LOADER: $(TEST_HOST)
         TEST_HOST: $(BUILT_PRODUCTS_DIR)/OpenDictation.app/OpenDictation
