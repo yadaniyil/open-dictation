@@ -1,0 +1,107 @@
+name: OpenDictation
+
+options:
+  bundleIdPrefix: dev.yako
+  deploymentTarget:
+    iOS: "26.0"
+  createIntermediateGroups: true
+  generateEmptyDirectories: true
+
+settings:
+  base:
+    DEVELOPMENT_TEAM: ""
+    CODE_SIGN_STYLE: Automatic
+    SWIFT_VERSION: "6.0"
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    TARGETED_DEVICE_FAMILY: "1"
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+
+# Exact pins: both libraries change their model handling between releases.
+packages:
+  FluidAudio:
+    url: https://github.com/FluidInference/FluidAudio
+    exactVersion: 0.17.7
+  WhisperKit:
+    url: https://github.com/argmaxinc/WhisperKit
+    exactVersion: 1.1.1
+
+targets:
+  OpenDictation:
+    type: application
+    platform: iOS
+    sources:
+      - OpenDictation
+      - Shared
+    info:
+      path: OpenDictation/Info.plist
+      properties:
+        CFBundleDisplayName: Open Dictation
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        NSMicrophoneUsageDescription: Open Dictation records your voice so it can turn it into text.
+        NSSupportsLiveActivities: true
+        UIBackgroundModes:
+          - audio
+        UILaunchScreen: {}
+        ITSAppUsesNonExemptEncryption: false
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.yako.open-dictation
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        SWIFT_ACTIVE_COMPILATION_CONDITIONS: $(inherited) APP_TARGET
+    dependencies:
+      - target: OpenDictationWidgets
+      - package: FluidAudio
+      - package: WhisperKit
+
+  OpenDictationWidgets:
+    type: app-extension
+    platform: iOS
+    sources:
+      - OpenDictationWidgets
+      - Shared
+    info:
+      path: OpenDictationWidgets/Info.plist
+      properties:
+        CFBundleDisplayName: Open Dictation
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.yako.open-dictation.widgets
+
+  OpenDictationTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - OpenDictationTests
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.yako.open-dictation.tests
+        GENERATE_INFOPLIST_FILE: YES
+        BUNDLE_LOADER: $(TEST_HOST)
+        TEST_HOST: $(BUILT_PRODUCTS_DIR)/OpenDictation.app/OpenDictation
+    dependencies:
+      - target: OpenDictation
+
+schemes:
+  OpenDictation:
+    build:
+      targets:
+        OpenDictation: all
+        OpenDictationWidgets: all
+        OpenDictationTests: [test]
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - OpenDictationTests
+    archive:
+      config: Release
