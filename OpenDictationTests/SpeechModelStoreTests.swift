@@ -71,6 +71,17 @@ struct SpeechModelStoreTests {
         #expect(store.engine == nil)
     }
 
+    @Test func aFirstDownloadIsPutInUseWhenNothingElseCanListen() async {
+        world.keys = []
+        let store = makeStore()
+        #expect(!store.canListen)
+
+        await store.download(.whisperLargeTurbo)?.value
+        #expect(store.selected == .whisperLargeTurbo)
+        #expect(store.canListen)
+        #expect(world.remembered == .whisperLargeTurbo)
+    }
+
     @Test func progressNeverGoesBackwards() async {
         let store = makeStore()
         parakeet.plan(steps: [0.6, 0.2], waitsForRelease: true)

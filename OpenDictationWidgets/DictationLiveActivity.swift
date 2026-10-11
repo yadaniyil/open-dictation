@@ -64,7 +64,7 @@ private struct ExpandedBottom: View {
         case .recording:
             HStack {
                 // One short line: a second line would not fit beside the button.
-                Text("Press the Action Button to stop.")
+                Text("Run the shortcut again to stop.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)

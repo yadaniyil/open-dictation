@@ -1,0 +1,36 @@
+WHAT THE APP DOES
+Open Dictation turns speech into text and puts the text on the clipboard. The user starts and stops it with the Action Button, through a shortcut the app provides. It is free. There is no account, no purchase, no ads, and no server of ours.
+
+TEST WITHOUT ANY KEY OR ACCOUNT (about 3 minutes, on Wi-Fi)
+1. Open the app and go through the three welcome pages. The last one, "Where your voice goes", names the services, says the on-device model is a 494 MB download, and asks for consent ("I agree"). Allow the microphone.
+2. On Wi-Fi the on-device speech model then downloads by itself. The card at the top of the main screen shows the progress and has a Cancel button. (On mobile data the card shows a Download button instead.) Keep the app open until the card is gone.
+3. Tap "Try it here", say a sentence, tap it again. The text appears under "Recent" and is on the clipboard. Paste it into Notes to check.
+This model runs on the iPhone. No audio leaves the device in this test.
+
+TEST THE ACTION BUTTON (iPhone 15 Pro or newer)
+1. On the main screen tap "Get" in step 1, then "Add Shortcut" in the Shortcuts app. The shortcut is named "Open Dictation". It runs the app's "Toggle Dictation" action and copies the result to the clipboard.
+2. iPhone Settings > Action Button > swipe to Shortcut > Choose a Shortcut > Open Dictation.
+3. Open another app, for example Notes. Hold the Action Button. The Dynamic Island shows that the app is listening, with a timer.
+4. Say a sentence. Hold the Action Button again. Paste: the text is on the clipboard.
+The shortcut is needed because iOS does not let an app write to the clipboard while another app is in front.
+
+NO ACTION BUTTON ON YOUR DEVICE?
+The main screen then shows the Control Center steps instead: add the "Run Shortcut" control and choose "Open Dictation". You can also run the "Open Dictation" shortcut from the Shortcuts app to start, and again to stop. To stop, you can also touch and hold the Dynamic Island and tap "Done".
+
+AUDIO BACKGROUND MODE (2.5.4)
+The user starts a recording with the Action Button while another app is in front. The app uses the AudioRecordingIntent API and has to keep recording until the user stops it. A Live Activity is visible for the whole recording, and iOS shows the microphone indicator. The app records only after the user starts it. It stops when the user stops it, or by itself after a time limit (10 minutes by default). It plays no silent audio and does nothing else in the background.
+
+THE DOWNLOAD (4.2.3)
+The welcome page states the size (494 MB) before the user agrees. The download starts only on Wi-Fi and with enough free space, shows its progress, and can be cancelled.
+
+NO LOGIN (5.1.1(v))
+The app has no accounts, so there is nothing to sign in to.
+
+THE USER'S OWN API KEY (3.1.1)
+The app is free and sells nothing. There is no in-app purchase, no subscription, no license key and no paid content. Dictation works fully with the on-device models, with no key and no account. As another option, a user who already has an account at OpenAI or ElevenLabs can paste their own API key in Settings. The key only lets the app send that user's audio to that user's own account at that service. We receive no money and no data from this. The optional writing styles are carried out by the user's own OpenAI account, so they are available only when the user has connected one.
+
+THIRD-PARTY AI DISCLOSURE AND CONSENT (5.1.2(i))
+Shown on first launch, on the welcome page "Where your voice goes", before anything can be recorded or sent. It names OpenAI and ElevenLabs and asks the user to agree. On-device models send nothing. The privacy policy is linked on that page and in Settings > About.
+
+SETUP PICTURES
+Steps 2 and 3 on the main screen show small crops of the iOS Settings screens, only to show the user where to tap.

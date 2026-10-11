@@ -91,6 +91,9 @@ final class SpeechModelStore {
                     Task { @MainActor in self.report(fraction, for: model) }
                 }
                 statuses[model] = .ready
+                // Nothing could listen yet (no key, no other model), so the new model takes over
+                // and a first download needs no second tap. Otherwise the user's choice stands.
+                if !canListen { select(model) }
             } catch {
                 if Task.isCancelled {
                     // A cancelled download leaves nothing behind. A failed one keeps what it has,

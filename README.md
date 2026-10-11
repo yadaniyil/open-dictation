@@ -10,7 +10,7 @@ Open Dictation is a small iPhone app for one job: you hold the Action Button, ta
 
 ## Features
 
-- One action, "Toggle Dictation", starts and stops. It works from the Action Button, Control Center, the Lock Screen, Back Tap, the Shortcuts app and the button in the app.
+- One action, "Toggle Dictation", starts and stops. With the "Open Dictation" shortcut it works from the Action Button, Control Center, the Lock Screen and Back Tap. You can also try it inside the app.
 - A Live Activity (Dynamic Island and Lock Screen) shows a timer while the app listens, with a button to stop.
 - Four ways to turn speech into text. Two run on the iPhone: Parakeet V3 and Whisper Large Turbo. Two run in the cloud with your own key: OpenAI and ElevenLabs.
 - Languages: Parakeet V3 knows 25 European languages, with English, Ukrainian and Polish among them. Whisper Large Turbo knows about a hundred. The language is detected automatically; with a cloud provider you can also set it.
@@ -20,6 +20,7 @@ Open Dictation is a small iPhone app for one job: you hold the Action Button, ta
 - The last 30 texts stay in the app, so nothing is lost if a paste goes wrong.
 - A recording you forget stops by itself (10 minutes by default, 1 to 30 in Settings) and is still turned into text.
 - A recording that could not be turned into text stays on the phone, and you can try again.
+- "Your stats": words dictated, time spoken, time saved against typing, an estimate of what your own API keys cost you, and how fast each speech option is on your iPhone. Worked out and kept on the iPhone, and never sent anywhere.
 
 ## Privacy
 
@@ -41,7 +42,7 @@ The full policy is in [PRIVACY.md](PRIVACY.md).
 | OpenAI | Cloud | Your own OpenAI API key | You pay OpenAI for what you use |
 | ElevenLabs | Cloud | Your own ElevenLabs API key | As your ElevenLabs plan says |
 
-Pick one in Settings and tap "Use for dictation". Saving a key or finishing a download never switches by itself.
+On a new iPhone the app downloads Parakeet V3 by itself after the welcome pages, on Wi-Fi only, and uses it. To change, pick one in Settings and tap "Use for dictation". After that first time, saving a key or finishing a download never switches by itself.
 
 ### OpenAI key
 
@@ -58,30 +59,27 @@ Make a key in your ElevenLabs account at <https://elevenlabs.io>. It needs one p
 
 - **Speech to Text**
 
-## Set up the Action Button
+## Set it up
 
-The app shows these steps under Settings > Action Button.
+The app's main screen walks you through these two steps.
 
-**1. Make the shortcut**
+**1. Get the shortcut**
 
-1. Open the Shortcuts app and tap **+**. If it asks you to describe a shortcut, tap **Edit**.
-2. In the search field, type **Toggle Dictation** and tap it.
-3. Search for **If** and tap it. It picks Toggle Dictation by itself. Tap **is** and choose **has any value**.
-4. Search for **Copy to Clipboard** and tap it. It lands at the bottom. Hold it and drag it up, to just under the **If** line. It then reads "Copy Toggle Dictation to clipboard".
-5. Tap the name at the top, choose **Rename** and type **Dictate**.
+Tap **Get** in the app, or open this link on the iPhone, then tap **Add Shortcut**:
+<https://www.icloud.com/shortcuts/9a8c5f365de04ccea4acb38ad90d3e20>
 
-The shortcut is what puts the text on the clipboard while another app is open. "Copy to Clipboard" has to sit inside the If. Left at the bottom, it empties your clipboard every time you start dictating.
+The shortcut is called **Open Dictation**. It runs the app's "Toggle Dictation" action and copies the text to the clipboard. It is needed because iOS does not let an app write to the clipboard while another app is in front. The app also shows how to make the shortcut by hand.
 
-**2. Put it on the Action Button**
+**2. Choose where to run it from**
 
-1. Open the iPhone Settings app and tap **Action Button**.
-2. Swipe to **Shortcut**, tap **Choose a Shortcut** and pick **Dictate**.
+- **Action Button** (iPhone 15 Pro and newer): iPhone Settings > Action Button > swipe to **Shortcut** > choose **Open Dictation** under My Shortcuts.
+- **Control Center**: open Control Center, tap **+**, add the **Run Shortcut** control and choose **Open Dictation**.
+- **Lock Screen**: hold the Lock Screen, tap **Customize**, replace a bottom button with **Run Shortcut** and choose **Open Dictation**.
+- **Back Tap**: iPhone Settings > Accessibility > Touch > Back Tap > Double Tap > **Open Dictation**.
 
 **3. Use it**
 
-Hold the Action Button, talk, hold it again, paste.
-
-No Action Button? The same shortcut works from Control Center, the Lock Screen or Back Tap.
+Run it, talk, run it again, paste. With the Action Button: hold, talk, hold again, paste.
 
 ## Build it yourself
 
@@ -132,6 +130,7 @@ The tests never call the real OpenAI or ElevenLabs API. Debug builds read `OD_AP
 - `OpenDictation/Core/Speech/`: the on-device models.
 - `OpenDictation/Core/OpenAITranscriber.swift`, `ElevenLabsTranscriber.swift`: the cloud speech calls.
 - `OpenDictation/Core/OpenAIRewriter.swift`: the optional style step.
+- `OpenDictation/Core/Stats/`: the on-device log behind "Your stats", and the list prices its cost estimates use.
 - `OpenDictationWidgets/`: the Live Activity and Dynamic Island.
 
 ## Third-party licenses

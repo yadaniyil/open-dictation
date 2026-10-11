@@ -7,7 +7,8 @@ struct OpenAIRewriter: Sendable {
     var session: URLSession = .shared
 
     /// - Parameter style: how the text should read, or nil to keep the speaker's exact words.
-    func rewrite(_ transcript: String, style: String?, apiKey: String, model: String) async throws -> String {
+    /// - Returns: the text, and the token counts OpenAI reports, which feed the user's own stats.
+    func rewrite(_ transcript: String, style: String?, apiKey: String, model: String) async throws -> Reply {
         var request = OpenAIAPI.request("responses", baseURL: baseURL, apiKey: apiKey, timeout: 30)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -15,7 +16,7 @@ struct OpenAIRewriter: Sendable {
 
         let (data, response) = try await session.data(for: request)
         try OpenAIAPI.check(response, data)
-        return try Self.text(in: data)
+        return Reply(text: try Self.text(in: data), usage: Self.usage(in: data))
     }
 
     static func body(_ transcript: String, style: String?, model: String) -> RewriteRequest {

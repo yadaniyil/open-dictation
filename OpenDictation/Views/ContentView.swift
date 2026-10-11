@@ -1,117 +1,80 @@
-import AVFoundation
 import SwiftUI
 
+/// The main screen. A new user sees two things to do: get something that listens, and set up
+/// the one best way to start a dictation on this iPhone. Once that is done the screen is just
+/// a reminder of how it goes, a place to try it, and the last texts.
 struct ContentView: View {
+    /// Which way to start is shown: the Action Button where there is one, Control Center elsewhere.
+    var hasActionButton = DeviceModel.hasActionButton
+
     private let controller = DictationController.shared
     private let speechModels = SpeechModelStore.shared
 
+    /// Set by the first dictation the shortcut starts, or by the user.
+    @AppStorage(SetupProgress.doneKey) private var isSetUp = false
     @State private var settings: SettingsSheet?
-    @State private var style = AppSettings.style
-    @State private var justCopied: HistoryStore.Item.ID?
+    @State private var showsStats = false
+
+    private var guide: Tutorial { Tutorial.best(hasActionButton: hasActionButton) }
 
     var body: some View {
         NavigationStack {
-            List {
-                Section {
-                    RecordPanel(controller: controller, missingKey: missingKey, toggle: toggle)
-                        .frame(maxWidth: .infinity)
-                        .listRowBackground(Color.clear)
-                }
+            ScrollView {
+                VStack(alignment: .leading, spacing: 0) {
+                    HomeTopBar(openStats: { showsStats = true }, openSettings: { settings = SettingsSheet() })
 
-                Section {
-                    StylePicker(style: $style)
-                        .listRowInsets(EdgeInsets())
-                        .listRowBackground(Color.clear)
-                } header: {
-                    Text("Style")
-                } footer: {
-                    Text(styleFooter)
-                }
+                    Text(isSetUp ? "Ready" : "Set it up once")
+                        .font(HomeStyle.titleFont)
+                        .tracking(HomeStyle.titleTracking)
+                        .foregroundStyle(HomeStyle.text)
+                        .accessibilityAddTraits(.isHeader)
+                        .padding(.top, HomeStyle.barToTitle)
+                        .padding(.bottom, HomeStyle.titleToContent)
 
-                if let missingKey {
-                    Section {
-                        Button("Add your \(missingKey.name) key", systemImage: "key.fill") {
-                            settings = SettingsSheet(provider: missingKey)
+                    VStack(alignment: .leading, spacing: HomeStyle.sectionSpacing) {
+                        // First, because a download takes a while and can run during the steps.
+                        if !speechModels.canListen {
+                            SpeechModelCard(store: speechModels) { settings = SettingsSheet() }
                         }
-                    } footer: {
-                        Text("\(missingKey.name) listens to your dictations, with your own account there. Settings has other choices, and the on-device ones need no account.")
-                    }
-                }
-
-                if controller.hasUnsentRecording {
-                    Section {
-                        Button("Try the last recording again", systemImage: "arrow.clockwise") {
-                            Task { await controller.retryUnsent() }
+                        if isSetUp {
+                            ReadyCard(guide: guide) { withAnimation { isSetUp = false } }
+                        } else {
+                            SetupSteps(guide: guide) { withAnimation { isSetUp = true } }
                         }
-                        .disabled(controller.phase != .idle)
-                        Button("Throw it away", systemImage: "trash", role: .destructive) {
-                            controller.discardUnsent()
+                        if speechModels.canListen {
+                            TryItRow(controller: controller, speechModels: speechModels) { provider in
+                                settings = SettingsSheet(provider: provider)
+                            }
                         }
-                    } footer: {
-                        Text("The last recording was not turned into text. It is still saved on this phone.")
-                    }
-                }
-
-                if !controller.history.items.isEmpty {
-                    Section("Recent") {
-                        ForEach(controller.history.items) { item in
-                            HistoryRow(item: item, justCopied: justCopied == item.id) { copy(item) }
+                        if controller.hasUnsentRecording {
+                            UnsentRecordingCard(controller: controller)
                         }
-                        .onDelete { offsets in
-                            offsets.map { controller.history.items[$0] }.forEach(controller.history.remove)
+                        if !controller.history.items.isEmpty {
+                            RecentTexts(history: controller.history)
                         }
                     }
                 }
+                .padding(.horizontal, HomeStyle.sideMargin)
+                .padding(.top, HomeStyle.topMargin)
+                .padding(.bottom, HomeStyle.bottomMargin)
             }
-            .navigationTitle("Open Dictation")
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Settings", systemImage: "gearshape") { settings = SettingsSheet() }
-                }
-            }
-            .sheet(item: $settings, onDismiss: refreshAfterSettings) { sheet in
+            .background(HomeStyle.background)
+            // The page has its own top bar. The name is what a guide's back button goes back to.
+            .navigationTitle("Home")
+            .toolbar(.hidden, for: .navigationBar)
+            .sheet(item: $settings) { sheet in
                 SettingsView(opening: sheet.provider)
             }
-            .onChange(of: style) { AppSettings.style = style }
-        }
-    }
-
-    private func refreshAfterSettings() {
-        // Writing custom instructions in Settings picks the Custom style.
-        style = AppSettings.style
-    }
-
-    /// The provider in use, while it still waits for its key. An on-device one never does.
-    private var missingKey: SpeechModel? {
-        speechModels.canListen ? nil : speechModels.selected
-    }
-
-    private var styleFooter: String {
-        if style == .custom, style.instructions(custom: AppSettings.customInstructions) == nil {
-            return "Write your own instructions in Settings first."
-        }
-        if style != .asSpoken, speechModels.status(of: .openAI) != .ready {
-            return "Styles need an OpenAI key."
-        }
-        return style.summary
-    }
-
-    private func toggle() {
-        Task {
-            if AVAudioApplication.shared.recordPermission == .undetermined {
-                _ = await AVAudioApplication.requestRecordPermission()
+            .sheet(isPresented: $showsStats) {
+                NavigationStack {
+                    YourStatsView()
+                        .toolbar {
+                            ToolbarItem(placement: .confirmationAction) {
+                                Button("Done") { showsStats = false }
+                            }
+                        }
+                }
             }
-            // The controller keeps the error to show under the button.
-            _ = try? await controller.toggle()
-        }
-    }
-
-    private func copy(_ item: HistoryStore.Item) {
-        UIPasteboard.general.string = item.text
-        justCopied = item.id
-        Task {
-            try? await Task.sleep(for: .seconds(1.5))
-            if justCopied == item.id { justCopied = nil }
         }
     }
 }
@@ -122,124 +85,10 @@ private struct SettingsSheet: Identifiable {
     var provider: SpeechModel?
 }
 
-private struct RecordPanel: View {
-    let controller: DictationController
-    /// The provider whose key has to be added before dictating, if any.
-    let missingKey: SpeechModel?
-    let toggle: () -> Void
-
-    var body: some View {
-        VStack(spacing: 14) {
-            Button(action: toggle) {
-                ZStack {
-                    Circle()
-                        .fill(isRecording ? Color.red : Color.accentColor)
-                        .frame(width: 108, height: 108)
-                    if controller.phase == .transcribing {
-                        ProgressView()
-                            .controlSize(.large)
-                            .tint(.white)
-                    } else {
-                        Image(systemName: isRecording ? "stop.fill" : "mic.fill")
-                            .font(.system(size: 40, weight: .semibold))
-                            .foregroundStyle(.white)
-                    }
-                }
-            }
-            .buttonStyle(.plain)
-            .disabled(missingKey != nil || controller.phase == .transcribing)
-            .opacity(missingKey == nil ? 1 : 0.4)
-            .accessibilityLabel(isRecording ? "Stop and copy" : "Start dictating")
-            .accessibilityIdentifier("recordButton")
-
-            statusText
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-                .accessibilityIdentifier("statusText")
-        }
-        .padding(.vertical, 12)
-    }
-
-    private var isRecording: Bool {
-        if case .recording = controller.phase { true } else { false }
-    }
-
-    @ViewBuilder private var statusText: some View {
-        switch controller.phase {
-        case .recording(let startedAt):
-            HStack(spacing: 6) {
-                Text("Listening")
-                Text(startedAt, style: .timer).monospacedDigit()
-            }
-        case .transcribing:
-            Text("Working…")
-        case .idle:
-            // A missing key comes first: the button is off, and the last result does not say why.
-            if let missingKey {
-                Text("Add your \(missingKey.name) key to start.")
-            } else {
-                switch controller.lastMessage {
-                case .copied(let note): result(note ?? "Copied. Paste it anywhere.", symbol: "checkmark.circle.fill")
-                case .failed(let message): result(message, symbol: "exclamationmark.triangle.fill")
-                case nil: Text("Tap to talk, or use the Action Button.")
-                }
-            }
-        }
-    }
-
-    /// Not a `Label`: inside a list row that pushes the icon far away from the words.
-    private func result(_ text: String, symbol: String) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: 6) {
-            Image(systemName: symbol)
-            Text(text)
-        }
-    }
+#Preview("With an Action Button") {
+    ContentView(hasActionButton: true)
 }
 
-private struct StylePicker: View {
-    @Binding var style: WritingStyle
-
-    var body: some View {
-        ScrollView(.horizontal) {
-            HStack(spacing: 8) {
-                ForEach(WritingStyle.allCases) { option in
-                    Button(option.name) { style = option }
-                        .font(.subheadline.weight(.medium))
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 8)
-                        .foregroundStyle(option == style ? Color.white : Color.primary)
-                        .background(Capsule().fill(option == style ? Color.accentColor : Color(.secondarySystemGroupedBackground)))
-                        .buttonStyle(.plain)
-                        .accessibilityAddTraits(option == style ? .isSelected : [])
-                }
-            }
-            .padding(.horizontal, 4)
-        }
-        .scrollIndicators(.hidden)
-    }
-}
-
-private struct HistoryRow: View {
-    let item: HistoryStore.Item
-    let justCopied: Bool
-    let copy: () -> Void
-
-    var body: some View {
-        Button(action: copy) {
-            VStack(alignment: .leading, spacing: 4) {
-                // `Color.primary`, because plain `.primary` inside a button means the blue tint.
-                Text(item.text)
-                    .foregroundStyle(Color.primary)
-                    .lineLimit(4)
-                Text(justCopied ? "Copied" : item.date.formatted(.relative(presentation: .named)))
-                    .font(.caption)
-                    .foregroundStyle(justCopied ? Color.green : Color.secondary)
-            }
-        }
-    }
-}
-
-#Preview {
-    ContentView()
+#Preview("Without one") {
+    ContentView(hasActionButton: false)
 }

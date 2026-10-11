@@ -5,7 +5,7 @@ Open Dictation is built with the work of other people. Thank you.
 
 
 SPEECH MODELS
-These are not inside the app. They are downloaded when you ask for them in Settings.
+These are not inside the app. They are downloaded to the iPhone after you install it.
 
 Parakeet TDT 0.6B v3
 Made by NVIDIA.

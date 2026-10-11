@@ -2,7 +2,7 @@ import SwiftUI
 
 /// The text step: spoken instructions, the user's own style, and the model that does it.
 struct StyleSettingsView: View {
-    /// The main screen's style. Writing custom instructions here switches it to Custom.
+    /// The style in use. Writing custom instructions here switches it to Custom.
     @Binding var style: WritingStyle
     let store: SpeechModelStore
 
@@ -16,7 +16,15 @@ struct StyleSettingsView: View {
                 Section {
                     Label("This step needs your OpenAI key. Without it the text is copied as spoken.", systemImage: "key.fill")
                     NavigationLink(value: SettingsRoute.provider(.openAI)) {
-                        SettingsRowLabel(title: "OpenAI", subtitle: "Add the key", symbol: SpeechModel.openAI.symbol, tint: SpeechModel.openAI.tint)
+                        HStack(spacing: 12) {
+                            ProviderLogo(model: .openAI, side: 29)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("OpenAI")
+                                Text("Add the key")
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
                     }
                 }
             }

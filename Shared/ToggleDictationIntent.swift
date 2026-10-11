@@ -1,6 +1,6 @@
 import AppIntents
 
-/// The one action behind the Action Button, the Shortcuts app and the Live Activity's Done button.
+/// The one action behind the user's shortcut and the Live Activity's Done button.
 /// The first run starts listening and hands back nothing; the next run stops and hands back the text,
 /// which a Shortcut can pass to "Copy to Clipboard".
 ///
@@ -39,9 +39,11 @@ struct ToggleDictationIntent: AudioRecordingIntent, LiveActivityIntent {
             else { throw error }
 
             try await continueInForeground(alwaysConfirm: false)
-            // With a missing key the app's own screen now shows what to do.
+            // With a missing key or unfinished first steps the app's own screen now shows what to do.
             switch error {
-            case OpenAIError.missingKey, ElevenLabsError.missingKey: return .result(value: nil)
+            case OpenAIError.missingKey, ElevenLabsError.missingKey,
+                 DictationController.DictationError.needsFirstSteps:
+                return .result(value: nil)
             default: break
             }
             try await controller.startAfterComingToFront()
@@ -56,7 +58,8 @@ struct ToggleDictationIntent: AudioRecordingIntent, LiveActivityIntent {
     /// Only problems from before the microphone started that having the app in front can sort out.
     private static func foregroundCanHelp(_ error: any Error) -> Bool {
         switch error {
-        case DictationController.DictationError.needsMicrophonePermission: true
+        case DictationController.DictationError.needsMicrophonePermission,
+             DictationController.DictationError.needsFirstSteps: true
         case is DictationController.DictationError: false
         case OpenAIError.missingKey, ElevenLabsError.missingKey: true
         case is OpenAIError, is ElevenLabsError: false

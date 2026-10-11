@@ -20,7 +20,7 @@ extension NetworkTests {
                 """)
 
             let text = try await makeRewriter().rewrite(
-                "um hello there", style: "Be formal.", apiKey: "sk-test", model: "test-model")
+                "um hello there", style: "Be formal.", apiKey: "sk-test", model: "test-model").text
 
             #expect(text == "Hello there.")
             let request = try #require(StubProtocol.lastRequest)

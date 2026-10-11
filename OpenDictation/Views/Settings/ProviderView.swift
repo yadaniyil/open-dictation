@@ -12,7 +12,7 @@ struct ProviderView: View {
         List {
             Section {
                 VStack(spacing: 10) {
-                    SettingsTile(symbol: model.symbol, tint: model.tint, side: 56)
+                    ProviderLogo(model: model, side: 56)
                     Text(model.name)
                         .font(.title2.weight(.bold))
                     Text(model.summary)
@@ -38,6 +38,7 @@ struct ProviderView: View {
             } else {
                 ProviderKeySection(model: model, store: store, fieldFocused: $keyFieldFocused)
             }
+            ProviderSpeedSection(model: model)
             if model == .openAI {
                 OpenAIModelSection()
             }

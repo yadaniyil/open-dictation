@@ -7,5 +7,8 @@ enum SettingsRoute: Hashable {
     case style
     case vocabulary
     case setupGuide
+    case stats
     case advanced
+    case about
+    case acknowledgements
 }

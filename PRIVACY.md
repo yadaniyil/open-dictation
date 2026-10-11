@@ -1,6 +1,6 @@
 # Open Dictation privacy policy
 
-Effective date: 2026-10-11
+Effective date: 2026-10-12
 
 Open Dictation is an iPhone app that turns your speech into text and puts the text on your clipboard. It is made by Danny Yakovlev, an independent developer. In this policy "I" means Danny Yakovlev.
 
@@ -60,6 +60,7 @@ Two things I read there on 2026-10-11, which may change: OpenAI writes that data
 | The audio of a dictation | A temporary file | Deleted as soon as it has been turned into text. |
 | A recording that could not be turned into text | The app's own storage, one file at most | Until "Try the last recording again" works, or you tap "Throw it away". |
 | Kept recordings (a testing aid, **off** unless you turn it on) | The app's own storage | The last 20 recordings with their texts, the style and the model name. Turning "Keep recordings" off deletes them all. |
+| Your stats: for each dictation the date, the speech option, how long you spoke, how long the text took, the number of words, and the token counts OpenAI reports for the text step. No text and no audio. | The app's own storage | Until you tap Settings > Your stats > "Clear stats", or delete the app. After a year, or after 2,000 newer dictations, a dictation is kept only as part of its month's totals. The numbers on the "Your stats" screen are worked out on your iPhone and are never sent to me or to anyone else. |
 | Your settings (language, style, custom instructions, word list, chosen model) | The app's preferences | Until you change them or delete the app. |
 | Downloaded speech models | The app's own storage | Until you tap "Delete download" or delete the app. |
 
@@ -67,7 +68,7 @@ Things iOS does, which you should know about:
 
 - **Clipboard.** The text is put on the system clipboard, because that is the point of the app. Any app you paste into gets it. If you use Apple's Universal Clipboard, iOS can make it available on your other Apple devices.
 - **Live Activity.** While the app listens, the Dynamic Island and the Lock Screen show a timer. When the text is ready, they show the first words of it for a few seconds.
-- **Backups.** If you back up your iPhone to iCloud or to a computer, the app's stored texts, kept recordings and settings are part of your backup, like the data of other apps. Downloaded models are left out. The API keys are stored for this device only.
+- **Backups.** If you back up your iPhone to iCloud or to a computer, the app's stored texts, kept recordings, stats and settings are part of your backup, like the data of other apps. Downloaded models are left out. The API keys are stored for this device only.
 - **Crash reports.** If you turned on "Share With App Developers" in the iPhone's Settings, Apple sends me crash and usage reports without your name. The app adds nothing to them.
 
 ## What the app does not do

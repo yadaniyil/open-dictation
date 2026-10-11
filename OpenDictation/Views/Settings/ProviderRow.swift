@@ -14,7 +14,7 @@ struct ProviderRow: View {
             ? AnyLayout(VStackLayout(alignment: .leading, spacing: 6))
             : AnyLayout(HStackLayout(spacing: 8))
         HStack(spacing: 12) {
-            SettingsTile(symbol: model.symbol, tint: model.tint)
+            ProviderLogo(model: model)
             layout {
                 VStack(alignment: .leading, spacing: 2) {
                     ViewThatFits(in: .horizontal) {

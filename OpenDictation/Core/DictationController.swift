@@ -30,6 +30,7 @@ final class DictationController {
     enum DictationError: LocalizedError {
         case busy
         case notRecording
+        case needsFirstSteps
         case needsMicrophonePermission
         case microphoneDenied
         case liveActivitiesOff
@@ -40,6 +41,7 @@ final class DictationController {
             switch self {
             case .busy: "Still working on the last one."
             case .notRecording: "Nothing is being recorded."
+            case .needsFirstSteps: "Open the app once to finish the first steps."
             case .needsMicrophonePermission: "Open the app once to allow the microphone."
             case .microphoneDenied: "The microphone is turned off for Open Dictation in Settings."
             case .liveActivitiesOff: "Turn on Live Activities for Open Dictation in Settings."
@@ -101,6 +103,8 @@ final class DictationController {
         switch phase {
         case .idle:
             try start(requireLiveActivity: true)
+            // Only the shortcut comes this way, so it is set up and the main screen can drop its steps.
+            SetupProgress.markDone()
             return .started
         case .recording:
             let work = Task { try await self.finish() }
@@ -116,6 +120,7 @@ final class DictationController {
             _ = await AVAudioApplication.requestRecordPermission()
         }
         try start(requireLiveActivity: true)
+        SetupProgress.markDone()
     }
 
     /// - Parameter requireLiveActivity: iOS ends a recording that an intent started unless a
@@ -123,6 +128,8 @@ final class DictationController {
     func start(requireLiveActivity: Bool = false) throws {
         guard phase == .idle else { throw DictationError.busy }
         do {
+            // Nothing is recorded before the user has agreed to where recordings go.
+            guard OnboardingState.hasAgreedToCloudProcessing else { throw DictationError.needsFirstSteps }
             guard speechModels.canListen else {
                 throw speechModels.selected == .elevenLabs ? ElevenLabsError.missingKey : OpenAIError.missingKey
             }
@@ -203,6 +210,8 @@ final class DictationController {
             let spoken: String
             // What did the listening, for the recording archive.
             let model: String
+            // Times the steps, for the user's own stats.
+            var stopwatch = DictationStopwatch(provider: speechModels.selected)
             if let engine = speechModels.engine {
                 model = speechModels.selected.rawValue
                 spoken = try await engine.transcribe(fileURL: fileURL, languageCode: AppSettings.languageCode)
@@ -220,6 +229,7 @@ final class DictationController {
                     vocabulary: AppSettings.vocabulary)
                 spoken = try await OpenAITranscriber().transcribe(fileURL: fileURL, apiKey: apiKey, options: options)
             }
+            stopwatch.speechEnded()
             var text = spoken
 
             // The style step is always OpenAI's, so it needs OpenAI's key whoever did the listening.
@@ -228,17 +238,22 @@ final class DictationController {
             let style = AppSettings.style.instructions(custom: AppSettings.customInstructions)
             if let apiKey, style != nil || AppSettings.followsSpokenInstructions {
                 do {
-                    text = try await OpenAIRewriter().rewrite(
+                    let reply = try await OpenAIRewriter().rewrite(
                         text, style: style, apiKey: apiKey, model: AppSettings.rewriteModel)
+                    text = reply.text
+                    stopwatch.usage = reply.usage
                 } catch {
                     note = "Copied as spoken. The style step did not work: \(error.localizedDescription)"
                 }
+                stopwatch.textEnded()
             } else if style != nil {
                 note = "Copied as spoken. Styles need an OpenAI key."
             }
 
             copyToClipboard(text)
             history.add(text)
+            // Before the recording is moved or deleted: its length is read from the file.
+            DictationLog.shared.record(stopwatch.record(text: text, recording: fileURL))
             if AppSettings.keepsRecordings {
                 RecordingArchive.shared.keep(fileURL, note: .init(
                     spoken: spoken, final: text, style: AppSettings.style.rawValue, model: model))

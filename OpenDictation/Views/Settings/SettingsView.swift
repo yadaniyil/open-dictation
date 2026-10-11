@@ -63,13 +63,19 @@ struct SettingsView: View {
 
                 Section {
                     NavigationLink(value: SettingsRoute.setupGuide) {
-                        SettingsRowLabel(title: "Action Button", subtitle: "How to set it up", symbol: "button.programmable", tint: .gray)
+                        SettingsRowLabel(title: "Ways to start", subtitle: "Every guide", symbol: "button.programmable", tint: .gray)
+                    }
+                    NavigationLink(value: SettingsRoute.stats) {
+                        SettingsRowLabel(title: "Your stats", subtitle: "Only on this iPhone", symbol: "chart.bar.fill", tint: .green)
                     }
                 }
 
                 Section {
                     NavigationLink(value: SettingsRoute.advanced) {
                         SettingsRowLabel(title: "Advanced", symbol: "gearshape.fill", tint: .gray)
+                    }
+                    NavigationLink(value: SettingsRoute.about) {
+                        SettingsRowLabel(title: "About", symbol: "info", tint: .gray)
                     }
                 } footer: {
                     VStack(alignment: .leading, spacing: 8) {
@@ -91,7 +97,10 @@ struct SettingsView: View {
                 case .style: StyleSettingsView(style: $style, store: speechModels)
                 case .vocabulary: VocabularyView(vocabulary: $vocabulary)
                 case .setupGuide: SetupGuideView()
+                case .stats: YourStatsView()
                 case .advanced: AdvancedSettingsView()
+                case .about: AboutView()
+                case .acknowledgements: AcknowledgementsView()
                 }
             }
             .onChange(of: style) { AppSettings.style = style }

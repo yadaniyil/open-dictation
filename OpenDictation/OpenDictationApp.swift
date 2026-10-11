@@ -7,9 +7,16 @@ struct OpenDictationApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .onboarding()
+                #if DEBUG
+                .task { if ModelBenchmark.isRequested { await ModelBenchmark.run() } }
+                #endif
         }
         .onChange(of: scenePhase) {
-            if scenePhase == .active { DictationController.shared.appBecameActive() }
+            guard scenePhase == .active else { return }
+            DictationController.shared.appBecameActive()
+            FirstModelDownload.resumeIfInterrupted()
+            Task { await FirstModelDownload.startIfSensible() }
         }
     }
 }

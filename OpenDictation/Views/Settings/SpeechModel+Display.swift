@@ -2,17 +2,12 @@ import SwiftUI
 
 /// How a speech model looks and reads in Settings.
 extension SpeechModel {
-    /// Plain symbols, not company logos: those are trademarks.
-    var symbol: String {
-        isOnDevice ? "iphone" : "cloud.fill"
-    }
-
-    var tint: Color {
+    /// The logo of the company that made the model: Parakeet is NVIDIA's, Whisper is OpenAI's.
+    var logo: ProviderMark {
         switch self {
-        case .openAI: .blue
-        case .elevenLabs: .indigo
-        case .parakeetV3: .teal
-        case .whisperLargeTurbo: .purple
+        case .openAI, .whisperLargeTurbo: .openAI
+        case .elevenLabs: .elevenLabs
+        case .parakeetV3: .nvidia
         }
     }
 
