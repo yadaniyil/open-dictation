@@ -20,6 +20,9 @@ struct TryItRow: View {
                         title
                             .font(HomeStyle.rowFont)
                             .foregroundStyle(HomeStyle.text)
+                            // The title gives way before the provider's name breaks in two.
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
                     provider
@@ -90,6 +93,8 @@ struct TryItRow: View {
         }
         .font(HomeStyle.detailFont)
         .foregroundStyle(HomeStyle.tint)
+        .lineLimit(1)
+        .fixedSize(horizontal: !typeSize.isAccessibilitySize, vertical: false)
     }
 
     /// One line under the row: what is missing, or how the last dictation went.

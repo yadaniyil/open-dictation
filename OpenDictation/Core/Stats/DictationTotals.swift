@@ -1,7 +1,7 @@
 import Foundation
 
 /// Dictations added up: one provider's, one month's, or all of them.
-struct DictationTotals: Codable, Equatable, Sendable {
+struct DictationTotals: Encodable, Equatable, Sendable {
     var dictations = 0
     var words = 0
     var audioSeconds = 0.0
@@ -11,6 +11,10 @@ struct DictationTotals: Codable, Equatable, Sendable {
     var textSeconds = 0.0
     var inputTokens = 0
     var outputTokens = 0
+    /// The speech cost the providers themselves reported, in US dollars, and how much speech
+    /// that covers. The rest of `audioSeconds` is priced by its length.
+    var speechDollars = 0.0
+    var costedAudioSeconds = 0.0
 
     /// What an average person types on a phone: 36 words a minute, measured on 37,000 people
     /// (Palin and others, "How do People Type on Mobile Devices?", MobileHCI 2019).
@@ -21,11 +25,6 @@ struct DictationTotals: Codable, Equatable, Sendable {
     var secondsSaved: Double {
         let typing = Double(words) / Self.typingWordsPerMinute * 60
         return max(0, typing - audioSeconds - speechSeconds - textSeconds)
-    }
-
-    /// How long the text step takes on average, or nil when it never ran.
-    var secondsPerTextStep: Double? {
-        textSteps > 0 ? textSeconds / Double(textSteps) : nil
     }
 
     mutating func add(_ record: DictationRecord) {
@@ -39,6 +38,10 @@ struct DictationTotals: Codable, Equatable, Sendable {
         }
         inputTokens += record.inputTokens ?? 0
         outputTokens += record.outputTokens ?? 0
+        if let dollars = record.speechDollars {
+            speechDollars += dollars
+            costedAudioSeconds += record.audioSeconds
+        }
     }
 
     static func += (sum: inout DictationTotals, more: DictationTotals) {
@@ -50,5 +53,30 @@ struct DictationTotals: Codable, Equatable, Sendable {
         sum.textSeconds += more.textSeconds
         sum.inputTokens += more.inputTokens
         sum.outputTokens += more.outputTokens
+        sum.speechDollars += more.speechDollars
+        sum.costedAudioSeconds += more.costedAudioSeconds
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case dictations, words, audioSeconds, speechSeconds, textSteps, textSeconds
+        case inputTokens, outputTokens, speechDollars, costedAudioSeconds
+    }
+}
+
+extension DictationTotals: Decodable {
+    /// The two cost sums came later. A log written before them still has to open.
+    init(from decoder: any Decoder) throws {
+        let fields = try decoder.container(keyedBy: CodingKeys.self)
+        self.init(
+            dictations: try fields.decode(Int.self, forKey: .dictations),
+            words: try fields.decode(Int.self, forKey: .words),
+            audioSeconds: try fields.decode(Double.self, forKey: .audioSeconds),
+            speechSeconds: try fields.decode(Double.self, forKey: .speechSeconds),
+            textSteps: try fields.decode(Int.self, forKey: .textSteps),
+            textSeconds: try fields.decode(Double.self, forKey: .textSeconds),
+            inputTokens: try fields.decode(Int.self, forKey: .inputTokens),
+            outputTokens: try fields.decode(Int.self, forKey: .outputTokens),
+            speechDollars: try fields.decodeIfPresent(Double.self, forKey: .speechDollars) ?? 0,
+            costedAudioSeconds: try fields.decodeIfPresent(Double.self, forKey: .costedAudioSeconds) ?? 0)
     }
 }

@@ -26,6 +26,11 @@ struct ParakeetEngine: LocalSpeechEngine {
             try await AsrModels.download(to: modelFolder, version: .v3) { update in
                 if let fraction = Self.fraction(for: update) { progress(fraction) }
             }
+            // FluidAudio skips that load, and says nothing, when it finds the files already there:
+            // after a download that was cut off at the very end. Then this is the slow load.
+            // Otherwise it is over in a moment.
+            progress(0.9)
+            try loadOnce()
             try Data().write(to: marker)
             progress(1)
         } catch {
@@ -36,6 +41,11 @@ struct ParakeetEngine: LocalSpeechEngine {
     func delete() throws {
         guard FileManager.default.fileExists(atPath: folder.path) else { return }
         try FileManager.default.removeItem(at: folder)
+    }
+
+    func prepare() async throws {
+        guard isDownloaded else { throw LocalSpeechError.notDownloaded }
+        try loadOnce()
     }
 
     /// Parakeet works out the language by itself and cannot be told which one to expect,
@@ -57,6 +67,13 @@ struct ParakeetEngine: LocalSpeechEngine {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { throw LocalSpeechError.noSpeech }
         return trimmed
+    }
+
+    /// Loads the model just as a dictation does and drops it at once. What stays is the Neural
+    /// Engine version iOS builds on the way, which is what makes a first load slow.
+    private func loadOnce() throws {
+        // `loadLocal` never downloads; the other loaders fetch the files again when a load fails.
+        _ = try AsrModels.loadLocal(from: modelFolder, version: .v3, configuration: Self.configuration)
     }
 
     /// The Action Button runs this while another app is in front, and iOS refuses GPU work in

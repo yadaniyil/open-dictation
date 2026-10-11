@@ -1,6 +1,6 @@
 import Foundation
 
-/// How the stats read on the screen: counts, lengths of time, money and speed, in plain words.
+/// How the stats read on the screen: counts, lengths of time and money, in plain words.
 enum StatsFormat {
     /// "12,480"
     static func count(_ number: Int) -> String {
@@ -49,33 +49,4 @@ enum StatsFormat {
     private static func cents(_ amount: Double) -> String {
         dollars((amount * 100).rounded() / 100)
     }
-
-    // MARK: - Speed
-
-    /// "9 seconds", "1 second", "2 minutes", and "under a second" for anything quicker.
-    static func wait(_ seconds: Double) -> String {
-        if seconds < 1 { return "under a second" }
-        if seconds < 1.5 { return "1 second" }
-        if seconds < 90 { return "\(Int(seconds.rounded())) seconds" }
-        return "\(Int((seconds / 60).rounded())) minutes"
-    }
-
-    /// The same inside a sentence: "about 9 seconds", but plain "under a second".
-    static func aboutWait(_ seconds: Double) -> String {
-        seconds < 1 ? wait(seconds) : "about \(wait(seconds))"
-    }
-
-    /// A provider's speed as the value of a row: "9 seconds", or that there is none to show yet.
-    static func speed(secondsPerMinute: Double?) -> String {
-        guard let secondsPerMinute else { return notMeasured }
-        return secondsPerMinute < 1 ? "Under a second" : wait(secondsPerMinute)
-    }
-
-    /// A provider's speed as one line on its own screen.
-    static func speedSentence(secondsPerMinute: Double?) -> String {
-        guard let secondsPerMinute else { return notMeasured }
-        return "A minute of speech takes \(aboutWait(secondsPerMinute))"
-    }
-
-    static let notMeasured = "Not measured yet"
 }

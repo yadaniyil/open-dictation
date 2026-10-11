@@ -218,8 +218,10 @@ final class DictationController {
             } else if speechModels.selected == .elevenLabs {
                 guard let key = AppSettings.elevenLabsKey else { throw ElevenLabsError.missingKey }
                 model = ElevenLabsTranscriber.model
-                spoken = try await ElevenLabsTranscriber().transcribe(
+                let reply = try await ElevenLabsTranscriber().transcribe(
                     fileURL: fileURL, apiKey: key, languageCode: AppSettings.languageCode)
+                spoken = reply.text
+                stopwatch.speechDollars = reply.dollars
             } else {
                 guard let apiKey else { throw OpenAIError.missingKey }
                 model = AppSettings.model
@@ -227,7 +229,9 @@ final class DictationController {
                     model: model,
                     languageCode: AppSettings.languageCode,
                     vocabulary: AppSettings.vocabulary)
-                spoken = try await OpenAITranscriber().transcribe(fileURL: fileURL, apiKey: apiKey, options: options)
+                let reply = try await OpenAITranscriber().transcribe(fileURL: fileURL, apiKey: apiKey, options: options)
+                spoken = reply.text
+                stopwatch.speechDollars = reply.billedSeconds.map { Pricing.speechCost(of: .openAI, seconds: $0) }
             }
             stopwatch.speechEnded()
             var text = spoken

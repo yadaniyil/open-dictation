@@ -17,6 +17,9 @@ struct OpenDictationApp: App {
             DictationController.shared.appBecameActive()
             FirstModelDownload.resumeIfInterrupted()
             Task { await FirstModelDownload.startIfSensible() }
+            // After an update the model in use has its slow first load ahead of it. Better now,
+            // with the app open, than during the next dictation.
+            SpeechModelStore.shared.prepareIfNeeded()
         }
     }
 }

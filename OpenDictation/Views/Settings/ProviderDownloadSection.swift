@@ -26,6 +26,9 @@ struct ProviderDownloadSection: View {
                 Button("Cancel") { store.cancelDownload(model) }
             case .ready:
                 deleteButton
+            case .preparing:
+                // iOS is reading the files right now.
+                deleteButton.disabled(true)
             case .failed:
                 Button("Try again") { store.download(model) }
                 // A download that stopped halfway keeps its files so it can carry on. This clears them.
@@ -34,7 +37,7 @@ struct ProviderDownloadSection: View {
         } header: {
             Text("Download")
         } footer: {
-            Text("Your voice stays on this iPhone, and it works offline. The first dictation after downloading can take longer. Keep the app open while it downloads.")
+            Text("Your voice stays on this iPhone, and it works offline. Keep the app open while it downloads. After an update, open the app once so it can prepare the model again. A dictation before that takes much longer.")
         }
     }
 

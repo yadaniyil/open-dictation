@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// The user's own numbers: how much was dictated, what it cost and how fast each provider is.
+/// The user's own numbers: how much was dictated, the time it saved and what it cost.
 /// All of it is worked out on the phone from `DictationLog`. Nothing is sent anywhere.
 struct YourStatsView: View {
     var log: DictationLog = .shared
@@ -16,7 +16,6 @@ struct YourStatsView: View {
                     headline(stats.total)
                     numbers(stats)
                     cost(stats)
-                    speed(stats)
                     clearSection
                 }
             } else {
@@ -80,25 +79,7 @@ struct YourStatsView: View {
         } header: {
             Text("Estimated cost")
         } footer: {
-            Text("At list prices from \(Pricing.checked): OpenAI \(StatsFormat.dollars(Pricing.openAISpeechPerMinute)) a minute, ElevenLabs \(StatsFormat.dollars(Pricing.elevenLabsSpeechPerHour)) an hour, and a little to OpenAI for styles and spoken instructions. On-device models are free. Your real bill depends on your plan.")
-        }
-    }
-
-    private func speed(_ stats: DictationStats) -> some View {
-        Section {
-            ForEach(stats.providers) { provider in
-                LabeledContent(
-                    provider.name, value: StatsFormat.speed(secondsPerMinute: stats.secondsPerMinute[provider]))
-            }
-        } header: {
-            Text("Speed")
-        } footer: {
-            let rule = "How long a minute of speech takes to turn into text, measured on this iPhone."
-            if let textStep = stats.total.secondsPerTextStep {
-                Text("\(rule) Styles and spoken instructions add \(StatsFormat.aboutWait(textStep)) to a dictation.")
-            } else {
-                Text(rule)
-            }
+            Text("ElevenLabs tells the app what each dictation cost. OpenAI tells it the seconds it billed, counted at \(StatsFormat.dollars(Pricing.openAISpeechPerMinute)) a minute (its price in \(Pricing.checked)), plus a little for styles and spoken instructions. On-device models are free. Your real bill can still differ.")
         }
     }
 

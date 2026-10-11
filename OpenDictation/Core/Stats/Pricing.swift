@@ -1,7 +1,9 @@
 import Foundation
 
-/// List prices in US dollars, for the estimates on the "Your stats" screen. The app bills
-/// nothing: the user pays each provider directly, and their plan decides the real sum.
+/// What dictations cost, for the "Your stats" screen. The app bills nothing: the user pays each
+/// provider directly. Where a provider says what a dictation cost, that is what counts:
+/// ElevenLabs names the sum, OpenAI names the seconds it billed. Everything else goes by the
+/// list prices below, in US dollars.
 ///
 /// All checked on 2026-10-11. Check them again when a default model changes, and move
 /// `checked` along. A model id the user typed in by hand is priced like the default one.
@@ -35,13 +37,24 @@ enum Pricing {
         var isSplit: Bool { openAI > 0 && elevenLabs > 0 }
     }
 
-    /// What these dictations cost at list prices. The on-device models cost nothing.
+    /// What this much speech costs at a provider's list price. The on-device models cost nothing.
+    static func speechCost(of provider: SpeechModel, seconds: Double) -> Double {
+        switch provider {
+        case .openAI: seconds / 60 * openAISpeechPerMinute
+        case .elevenLabs: seconds / 3600 * elevenLabsSpeechPerHour
+        case .parakeetV3, .whisperLargeTurbo: 0
+        }
+    }
+
+    /// What these dictations cost: what the providers reported, and the list price for the rest.
     static func cost(of totals: [SpeechModel: DictationTotals]) -> Cost {
         var cost = Cost()
         for (provider, sum) in totals {
+            let unreported = max(0, sum.audioSeconds - sum.costedAudioSeconds)
+            let speech = sum.speechDollars + speechCost(of: provider, seconds: unreported)
             switch provider {
-            case .openAI: cost.openAI += sum.audioSeconds / 60 * openAISpeechPerMinute
-            case .elevenLabs: cost.elevenLabs += sum.audioSeconds / 3600 * elevenLabsSpeechPerHour
+            case .openAI: cost.openAI += speech
+            case .elevenLabs: cost.elevenLabs += speech
             case .parakeetV3, .whisperLargeTurbo: break
             }
             // The text step is OpenAI's whichever provider did the listening.

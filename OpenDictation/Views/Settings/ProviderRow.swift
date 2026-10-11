@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// One speech provider in the Settings list: what it is, whether it is set up,
-/// and whether it is the one dictations use.
+/// One speech provider in the Settings list: what it is, how fast and how exact it is next to
+/// the others, whether it is set up, and whether it is the one dictations use.
 struct ProviderRow: View {
     let model: SpeechModel
     let store: SpeechModelStore
@@ -15,18 +15,22 @@ struct ProviderRow: View {
             : AnyLayout(HStackLayout(spacing: 8))
         HStack(spacing: 12) {
             ProviderLogo(model: model)
-            layout {
-                VStack(alignment: .leading, spacing: 2) {
-                    ViewThatFits(in: .horizontal) {
-                        HStack(spacing: 8) { name; inUse }
-                        VStack(alignment: .leading, spacing: 4) { name; inUse }
+            VStack(alignment: .leading, spacing: 4) {
+                layout {
+                    VStack(alignment: .leading, spacing: 2) {
+                        ViewThatFits(in: .horizontal) {
+                            HStack(spacing: 8) { name; inUse }
+                            VStack(alignment: .leading, spacing: 4) { name; inUse }
+                        }
+                        Text(model.kind)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
                     }
-                    Text(model.kind)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    ProviderStatusBadge(model: model, status: store.status(of: model))
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                ProviderStatusBadge(model: model, status: store.status(of: model))
+                // Under both, so the status at the end does not squeeze it onto two lines.
+                ProviderHintsLine(hints: model.hints)
             }
         }
         .accessibilityElement(children: .combine)
@@ -50,7 +54,8 @@ struct ProviderRow: View {
     }
 }
 
-/// The trailing end of a provider row: a green check, what is left to do, a download ring or a warning.
+/// The trailing end of a provider row: a green check, what is left to do, a download ring,
+/// a spinner while the model is prepared, or a warning.
 struct ProviderStatusBadge: View {
     let model: SpeechModel
     let status: SpeechModelStore.Status
@@ -73,6 +78,14 @@ struct ProviderStatusBadge: View {
                         .monospacedDigit()
                         .foregroundStyle(.secondary)
                 }
+            case .preparing:
+                HStack(spacing: 6) {
+                    ProgressView()
+                        .controlSize(.small)
+                    Text(model.statusText(status))
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
             case .failed:
                 Image(systemName: "exclamationmark.triangle.fill")
                     .foregroundStyle(.orange)
@@ -87,7 +100,7 @@ struct ProviderStatusBadge: View {
         switch status {
         case .notSetUp: model.isOnDevice ? "Not downloaded" : "Not set up"
         case .failed(let message): "Problem: \(message)"
-        case .ready, .downloading: model.statusText(status)
+        case .ready, .downloading, .preparing: model.statusText(status)
         }
     }
 }

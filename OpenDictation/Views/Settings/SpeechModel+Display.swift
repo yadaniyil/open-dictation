@@ -36,9 +36,14 @@ extension SpeechModel {
         case .ready: isOnDevice ? "Downloaded" : "Connected"
         case .notSetUp: isOnDevice ? "Not downloaded" : "Not connected"
         case .downloading(let progress): "Downloading \(Self.percent(progress))"
+        case .preparing: "Preparing"
         case .failed(let message): message
         }
     }
+
+    /// Said wherever a model is being prepared: on the main screen and on the model's own screen.
+    /// Short enough for one line of the main screen's card on a small iPhone.
+    static let preparingNote = "Once per update. Keep the app open."
 
     static func percent(_ progress: Double) -> String {
         "\(Int((min(max(progress, 0), 1) * 100).rounded(.down)))%"

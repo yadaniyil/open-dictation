@@ -6,10 +6,15 @@ protocol LocalSpeechEngine: Sendable {
     init(folder: URL)
     /// True when every model file is on disk and ready to load.
     var isDownloaded: Bool { get }
-    /// Downloads the model files. `progress` receives 0...1. Safe to call again after a failure.
+    /// Downloads the model files and loads the model once, so a fresh download is also prepared.
+    /// `progress` receives 0...1. Safe to call again after a failure.
     func download(progress: @escaping @Sendable (Double) -> Void) async throws
     /// Removes the model files from disk.
     func delete() throws
+    /// Loads the model once and lets it go. The first load after the app or iOS was updated is the
+    /// slow one, half a minute to a few minutes, because iOS builds the model's Neural Engine
+    /// version again. Doing it here takes that wait off the next dictation.
+    func prepare() async throws
     /// Loads the model, transcribes the file, then lets the model go again so the app does not
     /// sit on its memory while idle. `languageCode` is an ISO-639-1 hint, or "" to detect.
     func transcribe(fileURL: URL, languageCode: String) async throws -> String

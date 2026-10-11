@@ -17,6 +17,10 @@ struct DictationRecord: Codable, Equatable, Sendable {
     /// What OpenAI counted for the text step, when it said.
     var inputTokens: Int?
     var outputTokens: Int?
+    /// What the speech step cost in US dollars, going by what the provider reported: ElevenLabs
+    /// names the sum, OpenAI names the seconds it billed. Nil when it said nothing; the cost is
+    /// then worked out from the recording's length.
+    var speechDollars: Double?
 
     /// Counts words the way the system's text tools do, so "don't" is one word and a language
     /// written without spaces still gets a fair count.

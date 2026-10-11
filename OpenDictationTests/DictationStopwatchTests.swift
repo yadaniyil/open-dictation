@@ -39,6 +39,7 @@ struct DictationStopwatchTests {
         var stopwatch = DictationStopwatch(provider: .elevenLabs)
         stopwatch.speechEnded()
         stopwatch.usage = TokenUsage(input: 312, output: 41)
+        stopwatch.speechDollars = 0.0012
         stopwatch.textEnded()
         let record = try #require(stopwatch.record(text: "Hello there, world.", recording: recording, date: date))
 
@@ -48,6 +49,7 @@ struct DictationStopwatchTests {
         #expect(record.words == 3)
         #expect(record.inputTokens == 312)
         #expect(record.outputTokens == 41)
+        #expect(record.speechDollars == 0.0012)
         // Nothing was waited for here, so both steps took next to no time.
         #expect((0..<1).contains(record.speechSeconds))
         #expect((0..<1).contains(try #require(record.textSeconds)))
@@ -61,6 +63,7 @@ struct DictationStopwatchTests {
         #expect(record.textSeconds == nil)
         #expect(record.inputTokens == nil)
         #expect(record.outputTokens == nil)
+        #expect(record.speechDollars == nil)
     }
 
     @Test func theStepsAreTimedOneAfterTheOther() async throws {

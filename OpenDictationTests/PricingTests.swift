@@ -26,6 +26,25 @@ struct PricingTests {
         #expect(cost.openAI == 0)
     }
 
+    /// ElevenLabs names the sum for a dictation. That sum counts, whatever the list price says.
+    @Test func whatAProviderReportedCountsBeforeTheListPrice() {
+        var sum = DictationTotals()
+        // An hour that ElevenLabs said cost $0.40, and an older hour it said nothing about.
+        sum.add(.sample("2026-10-10T09:00:00Z", .elevenLabs, audio: 3600, dollars: 0.40))
+        sum.add(.sample("2026-10-10T10:00:00Z", .elevenLabs, audio: 3600))
+        let cost = Pricing.cost(of: [.elevenLabs: sum])
+        #expect(isClose(cost.elevenLabs, 0.40 + 0.22))
+        #expect(cost.openAI == 0)
+    }
+
+    /// OpenAI names the seconds it billed. The controller turns them into dollars with this.
+    @Test func speechHasAListPriceByTheSecond() {
+        #expect(isClose(Pricing.speechCost(of: .openAI, seconds: 60), 0.0045))
+        #expect(isClose(Pricing.speechCost(of: .elevenLabs, seconds: 3600), 0.22))
+        #expect(Pricing.speechCost(of: .parakeetV3, seconds: 3600) == 0)
+        #expect(Pricing.speechCost(of: .whisperLargeTurbo, seconds: 3600) == 0)
+    }
+
     @Test func onDeviceModelsCostNothing() {
         let cost = Pricing.cost(of: [.parakeetV3: totals(audio: 36_000), .whisperLargeTurbo: totals(audio: 36_000)])
         #expect(cost == Pricing.Cost())

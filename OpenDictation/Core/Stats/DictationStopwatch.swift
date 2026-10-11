@@ -5,6 +5,9 @@ struct DictationStopwatch {
     let provider: SpeechModel
     /// What OpenAI counted for the text step, when it said.
     var usage: TokenUsage?
+    /// What the speech step cost, going by what the provider itself reported. Nil when it
+    /// reported nothing, and for a model on the phone.
+    var speechDollars: Double?
 
     private let clock = ContinuousClock()
     private var lapStart: ContinuousClock.Instant
@@ -35,7 +38,7 @@ struct DictationStopwatch {
             date: date, provider: provider,
             audioSeconds: Self.rounded(audioSeconds), speechSeconds: Self.rounded(speechSeconds),
             textSeconds: textSeconds.map(Self.rounded), words: DictationRecord.words(in: text),
-            inputTokens: usage?.input, outputTokens: usage?.output)
+            inputTokens: usage?.input, outputTokens: usage?.output, speechDollars: speechDollars)
     }
 
     /// How long a sound file plays, or nil when it cannot be opened.

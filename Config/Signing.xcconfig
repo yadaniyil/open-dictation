@@ -1,0 +1,4 @@
+// Signing. The Apple developer team id is not kept in git: it comes from Local.xcconfig,
+// next to this file. Copy Local.example.xcconfig to Local.xcconfig and put your own id in it.
+// The question mark means a missing file is fine (the Simulator needs no team).
+#include? "Local.xcconfig"

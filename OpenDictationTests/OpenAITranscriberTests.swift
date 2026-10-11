@@ -18,10 +18,12 @@ extension NetworkTests {
             StubProtocol.reset(status: 200, body: #"{"text":"  Hello there.  ","languages":[{"code":"en"}]}"#)
             let file = try makeAudioFile()
 
-            let text = try await makeTranscriber().transcribe(
+            let reply = try await makeTranscriber().transcribe(
                 fileURL: file, apiKey: "sk-test", options: .init(model: "gpt-transcribe"))
 
-            #expect(text == "Hello there.")
+            #expect(reply.text == "Hello there.")
+            // This answer has no `usage`, which is fine.
+            #expect(reply.billedSeconds == nil)
             let request = try #require(StubProtocol.lastRequest)
             #expect(request.url?.absoluteString == "https://stub.test/v1/audio/transcriptions")
             #expect(request.httpMethod == "POST")
@@ -30,6 +32,22 @@ extension NetworkTests {
             #expect(body.contains("name=\"model\"\r\n\r\ngpt-transcribe\r\n"))
             #expect(body.contains("name=\"file\"; filename=\"\(file.lastPathComponent)\""))
             #expect(body.contains("fake-audio"))
+        }
+
+        /// OpenAI says how many seconds it billed. It feeds the user's own stats.
+        @Test func theBilledSecondsComeFromTheAnswer() async throws {
+            StubProtocol.reset(
+                status: 200, body: #"{"text":"Hello","languages":[{"code":"en"}],"usage":{"type":"duration","seconds":9}}"#)
+            let reply = try await makeTranscriber().transcribe(
+                fileURL: try makeAudioFile(), apiKey: "sk-test", options: .init(model: "gpt-transcribe"))
+            #expect(reply == .init(text: "Hello", billedSeconds: 9))
+
+            // An older model counts tokens there. That is not seconds.
+            StubProtocol.reset(
+                status: 200, body: #"{"text":"Hello","usage":{"type":"tokens","input_tokens":14,"output_tokens":3}}"#)
+            let older = try await makeTranscriber().transcribe(
+                fileURL: try makeAudioFile(), apiKey: "sk-test", options: .init(model: "gpt-4o-transcribe"))
+            #expect(older.billedSeconds == nil)
         }
 
         @Test func newModelUsesLanguagesAndKeywords() {

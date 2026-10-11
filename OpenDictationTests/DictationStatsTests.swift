@@ -63,51 +63,6 @@ struct DictationStatsTests {
         #expect(october.total.words == 111)
     }
 
-    // MARK: - Speed
-
-    @Test func speedIsWaitingPerMinuteOfSpeech() {
-        // 90 seconds of speech took 13.5 seconds: 9 for each minute.
-        let records: [DictationRecord] = [
-            .sample("2026-10-10T09:00:00Z", .whisperLargeTurbo, audio: 30, speech: 6),
-            .sample("2026-10-10T10:00:00Z", .whisperLargeTurbo, audio: 60, speech: 7.5),
-        ]
-        #expect(DictationStats.secondsPerMinute(of: records) == 9)
-    }
-
-    @Test func speedNeedsAMinuteOfSpeech() {
-        let short: [DictationRecord] = [
-            .sample("2026-10-10T09:00:00Z", audio: 29.5, speech: 3),
-            .sample("2026-10-10T10:00:00Z", audio: 30, speech: 3),
-        ]
-        #expect(DictationStats.secondsPerMinute(of: short) == nil)
-        #expect(DictationStats.secondsPerMinute(of: []) == nil)
-        #expect(DictationStats.secondsPerMinute(of: short + [.sample("2026-10-10T11:00:00Z", audio: 0.5, speech: 0)]) == 6)
-    }
-
-    @Test func speedFollowsTheLatestDictationsOnly() {
-        // Ten slow ones from long ago, then fifty quick ones.
-        let slow = (0..<10).map { _ in DictationRecord.sample("2026-01-01T09:00:00Z", audio: 60, speech: 60) }
-        let quick = (0..<DictationStats.speedSample).map { _ in
-            DictationRecord.sample("2026-10-10T09:00:00Z", audio: 60, speech: 4)
-        }
-        #expect(DictationStats.secondsPerMinute(of: slow + quick) == 4)
-    }
-
-    @Test func eachProviderHasItsOwnSpeed() {
-        let measured = stats([
-            .sample("2026-10-10T09:00:00Z", .parakeetV3, audio: 120, speech: 10),
-            .sample("2026-10-10T10:00:00Z", .whisperLargeTurbo, audio: 120, speech: 40),
-            .sample("2026-10-10T11:00:00Z", .openAI, audio: 20, speech: 2),
-        ], now: "2026-10-11T12:00:00Z")
-
-        #expect(measured.secondsPerMinute[.parakeetV3] == 5)
-        #expect(measured.secondsPerMinute[.whisperLargeTurbo] == 20)
-        // Used, but not for long enough to say.
-        #expect(measured.secondsPerMinute[.openAI] == nil)
-        #expect(measured.secondsPerMinute[.elevenLabs] == nil)
-        #expect(measured.providers == [.openAI, .parakeetV3, .whisperLargeTurbo])
-    }
-
     // MARK: - Time
 
     @Test func timeSavedIsTypingTimeLessTalkingAndWaiting() {
@@ -124,14 +79,13 @@ struct DictationStatsTests {
         #expect(DictationTotals().secondsSaved == 0)
     }
 
-    @Test func theTextStepIsAveragedOverTheDictationsThatHadOne() {
+    @Test func theTextStepIsCountedOnlyWhereItRan() {
         var totals = DictationTotals()
         totals.add(.sample("2026-10-10T09:00:00Z", text: 1))
         totals.add(.sample("2026-10-10T10:00:00Z"))
         totals.add(.sample("2026-10-10T11:00:00Z", text: 2))
         #expect(totals.textSteps == 2)
-        #expect(totals.secondsPerTextStep == 1.5)
-        #expect(DictationTotals().secondsPerTextStep == nil)
+        #expect(totals.textSeconds == 3)
     }
 
     // MARK: - Words

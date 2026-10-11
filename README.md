@@ -20,7 +20,7 @@ Open Dictation is a small iPhone app for one job: you hold the Action Button, ta
 - The last 30 texts stay in the app, so nothing is lost if a paste goes wrong.
 - A recording you forget stops by itself (10 minutes by default, 1 to 30 in Settings) and is still turned into text.
 - A recording that could not be turned into text stays on the phone, and you can try again.
-- "Your stats": words dictated, time spoken, time saved against typing, an estimate of what your own API keys cost you, and how fast each speech option is on your iPhone. Worked out and kept on the iPhone, and never sent anywhere.
+- "Your stats": words dictated, time spoken, time saved against typing, and an estimate of what your own API keys cost you. Worked out and kept on the iPhone, and never sent anywhere.
 
 ## Privacy
 
@@ -43,6 +43,8 @@ The full policy is in [PRIVACY.md](PRIVACY.md).
 | ElevenLabs | Cloud | Your own ElevenLabs API key | As your ElevenLabs plan says |
 
 On a new iPhone the app downloads Parakeet V3 by itself after the welcome pages, on Wi-Fi only, and uses it. To change, pick one in Settings and tap "Use for dictation". After that first time, saving a key or finishing a download never switches by itself.
+
+After an update of the app or of iOS, the iPhone has to prepare an on-device model again. That takes from half a minute to a few minutes. The app does it by itself when you open it, and shows "Preparing the speech model" meanwhile. So open the app once after an update: a dictation before that takes much longer.
 
 ### OpenAI key
 
@@ -97,10 +99,10 @@ git clone https://github.com/yadaniyil/open-dictation.git
 cd open-dictation
 ```
 
-Open `project.yml` and change two things to your own:
+Then make two things your own:
 
-- `DEVELOPMENT_TEAM`: your team id
-- `bundleIdPrefix` and the `PRODUCT_BUNDLE_IDENTIFIER` lines (app, widget extension, tests): a bundle id that belongs to you
+- Your team id: copy `Config/Local.example.xcconfig` to `Config/Local.xcconfig` and put your team id in it. That file stays out of git.
+- Your bundle id: in `project.yml`, change `bundleIdPrefix` and the `PRODUCT_BUNDLE_IDENTIFIER` lines (app, widget extension, tests) to a bundle id that belongs to you.
 
 Then:
 

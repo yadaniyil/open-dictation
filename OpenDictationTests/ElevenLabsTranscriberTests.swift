@@ -15,6 +15,10 @@ extension NetworkTests {
         }
 
         private func transcribe(languageCode: String = "") async throws -> String {
+            try await reply(languageCode: languageCode).text
+        }
+
+        private func reply(languageCode: String = "") async throws -> ElevenLabsTranscriber.Reply {
             try await makeTranscriber().transcribe(fileURL: try makeAudioFile(), apiKey: "xi-test", languageCode: languageCode)
         }
 
@@ -36,6 +40,22 @@ extension NetworkTests {
             // No language was picked, so ElevenLabs detects it. Key terms cost extra and are never sent.
             #expect(!body.contains("language_code"))
             #expect(!body.contains("keyterms"))
+        }
+
+        /// ElevenLabs puts the price of a call in a header. It feeds the user's own stats.
+        @Test func theCostComesFromTheAnswersHeader() async throws {
+            StubProtocol.reset(
+                status: 200, body: #"{"text":"Hello"}"#,
+                headers: ["character-cost": "12", "fiat-cost-before-overages": "0.0012"])
+            #expect(try await reply() == .init(text: "Hello", dollars: 0.0012))
+
+            // An answer without the header, or with nonsense in it, is still a good answer.
+            StubProtocol.reset(status: 200, body: #"{"text":"Hello"}"#)
+            #expect(try await reply() == .init(text: "Hello", dollars: nil))
+            StubProtocol.reset(status: 200, body: #"{"text":"Hello"}"#, headers: ["fiat-cost-before-overages": "-1"])
+            #expect(try await reply().dollars == nil)
+            StubProtocol.reset(status: 200, body: #"{"text":"Hello"}"#, headers: ["fiat-cost-before-overages": "soon"])
+            #expect(try await reply().dollars == nil)
         }
 
         @Test func pickedLanguageIsSent() async throws {

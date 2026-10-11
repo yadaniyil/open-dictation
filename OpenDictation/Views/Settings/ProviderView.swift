@@ -30,15 +30,18 @@ struct ProviderView: View {
             } footer: {
                 if store.fellBackFrom == model {
                     Text("\(model.name) is no longer set up, so dictation went back to OpenAI.")
+                } else if status == .preparing {
+                    Text(SpeechModel.preparingNote)
                 }
             }
 
             if model.isOnDevice {
                 ProviderDownloadSection(model: model, store: store)
             } else {
+                // The field first, so a user who already has a key need not scroll past the steps.
                 ProviderKeySection(model: model, store: store, fieldFocused: $keyFieldFocused)
+                ProviderKeySteps(model: model)
             }
-            ProviderSpeedSection(model: model)
             if model == .openAI {
                 OpenAIModelSection()
             }
@@ -68,6 +71,7 @@ struct ProviderView: View {
             case .ready: Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
             case .notSetUp: Image(systemName: "circle.dashed").foregroundStyle(.secondary)
             case .downloading(let progress): ProgressRing(progress: progress)
+            case .preparing: ProgressView()
             case .failed: Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange)
             }
         }
@@ -95,7 +99,7 @@ struct ProviderView: View {
             }
             .buttonStyle(.borderedProminent)
             .controlSize(.large)
-            .disabled(status != .ready)
+            .disabled(!status.isUsable)
             .accessibilityIdentifier("useForDictation")
         }
     }

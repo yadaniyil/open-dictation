@@ -23,12 +23,22 @@ enum ElevenLabsError: LocalizedError, Equatable {
 /// Sends an audio file to ElevenLabs' speech-to-text endpoint with the user's own key.
 struct ElevenLabsTranscriber: Sendable {
     static let model = "scribe_v2"
+    /// The header in which ElevenLabs says what a call cost, in US dollars.
+    static let costHeader = "fiat-cost-before-overages"
+
+    /// What a transcription gives back.
+    struct Reply: Equatable, Sendable {
+        let text: String
+        /// What ElevenLabs says this call cost, in US dollars. Nil when it did not say.
+        /// It feeds the cost in the user's own stats.
+        let dollars: Double?
+    }
 
     var baseURL: URL = AppSettings.elevenLabsBaseURL
     var session: URLSession = .shared
 
     /// - Parameter languageCode: ISO-639-1 code, or empty to let ElevenLabs detect it.
-    func transcribe(fileURL: URL, apiKey: String, languageCode: String = "") async throws -> String {
+    func transcribe(fileURL: URL, apiKey: String, languageCode: String = "") async throws -> Reply {
         let audio = try Data(contentsOf: fileURL)
         let boundary = "od-\(UUID().uuidString)"
 
@@ -51,7 +61,15 @@ struct ElevenLabsTranscriber: Sendable {
         }
         let text = decoded.text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { throw ElevenLabsError.noSpeech }
-        return text
+        return Reply(text: text, dollars: Self.cost(in: response))
+    }
+
+    /// Reads the cost out of the answer's headers. An answer without it is still a good answer.
+    static func cost(in response: URLResponse) -> Double? {
+        guard let value = (response as? HTTPURLResponse)?.value(forHTTPHeaderField: costHeader),
+              let dollars = Double(value.trimmingCharacters(in: .whitespaces)), dollars.isFinite, dollars >= 0
+        else { return nil }
+        return dollars
     }
 
     /// Form fields in order. The "Words to get right" setting is left out on purpose:

@@ -53,12 +53,13 @@ enum SpeechModel: String, CaseIterable, Identifiable, Sendable {
         }
     }
 
-    /// The engine that runs this model on the phone. A cloud model has none.
+    /// The engine that runs this model on the phone. A cloud model has none. Every engine made
+    /// here waits its turn, so preparing a model and dictating never load two at once.
     func makeEngine() -> (any LocalSpeechEngine)? {
         switch self {
         case .openAI, .elevenLabs: nil
-        case .parakeetV3: ParakeetEngine(folder: folder)
-        case .whisperLargeTurbo: WhisperEngine(folder: folder)
+        case .parakeetV3: OneAtATime(ParakeetEngine(folder: folder))
+        case .whisperLargeTurbo: OneAtATime(WhisperEngine(folder: folder))
         }
     }
 

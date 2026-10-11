@@ -9,7 +9,7 @@ struct DictationLogTests {
         let stats = await StatsTestSupport.makeLog().stats(now: now)
         #expect(stats.isEmpty)
         #expect(stats.total == DictationTotals())
-        #expect(stats.providers.isEmpty)
+        #expect(stats.allTime.isEmpty)
     }
 
     @Test func dictationsAreAddedUpByProvider() async {
@@ -26,7 +26,7 @@ struct DictationLogTests {
         #expect(stats.total == DictationTotals(
             dictations: 3, words: 125, audioSeconds: 60, speechSeconds: 6,
             textSteps: 2, textSeconds: 3, inputTokens: 580, outputTokens: 120))
-        #expect(stats.providers == [.openAI, .parakeetV3])
+        #expect(Set(stats.allTime.keys) == [.openAI, .parakeetV3])
     }
 
     @Test func theLogSurvivesAReload() async {
@@ -39,6 +39,25 @@ struct DictationLogTests {
         let nextLaunch = StatsTestSupport.makeLog(fileURL: fileURL)
         #expect(await nextLaunch.stats(now: now) == before)
         #expect(before.total.dictations == 2)
+    }
+
+    /// A log written before the cost sums existed has to open, with its costs worked out from
+    /// the lengths as before.
+    @Test func anOlderLogStillOpens() async throws {
+        let fileURL = StatsTestSupport.newFileURL()
+        let older = """
+            {"months":{"2026-09":{"openAI":{"audioSeconds":600,"dictations":20,"inputTokens":0,"outputTokens":0,\
+            "speechSeconds":30,"textSeconds":0,"textSteps":0,"words":1500}}},\
+            "records":[{"audioSeconds":30,"date":"2026-10-10T09:00:00Z","provider":"openAI","speechSeconds":3,"words":60}]}
+            """
+        try Data(older.utf8).write(to: fileURL)
+
+        let stats = await StatsTestSupport.makeLog(fileURL: fileURL).stats(now: now)
+        #expect(stats.total.dictations == 21)
+        #expect(stats.total.words == 1560)
+        #expect(stats.total.speechDollars == 0)
+        // 630 seconds at $0.0045 a minute.
+        #expect(abs(Pricing.cost(of: stats.allTime).openAI - 630.0 / 60 * 0.0045) < 0.000_000_1)
     }
 
     @Test func aBrokenFileStartsFromZeroAndIsReplaced() async throws {

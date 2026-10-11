@@ -1,6 +1,7 @@
 import SwiftUI
 
 /// The key of a cloud provider: paste, save, see its last four characters, remove.
+/// How to get one is `ProviderKeySteps`, just under it on the screen.
 struct ProviderKeySection: View {
     let model: SpeechModel
     let store: SpeechModelStore
@@ -41,8 +42,17 @@ struct ProviderKeySection: View {
                 .submitLabel(.done)
                 .onSubmit(save)
                 .accessibilityIdentifier("apiKeyField")
-            Button(checksKey ? "Save and check" : "Save", action: save)
-                .disabled(!canSave)
+            // A filled button, so it cannot be taken for a second field under the first.
+            Button(action: save) {
+                Text(checksKey ? "Save and check" : "Save")
+                    .font(.headline)
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
+            .disabled(!canSave)
+            .padding(.vertical, 4)
+            .accessibilityIdentifier("saveKey")
             switch outcome {
             case .none: EmptyView()
             case .checking: Label("Checking…", systemImage: "hourglass")
@@ -67,9 +77,9 @@ struct ProviderKeySection: View {
     private var footer: String {
         switch model {
         case .elevenLabs:
-            "Make a key in your ElevenLabs account at elevenlabs.io. It needs the Speech to Text permission. It is stored in this phone's Keychain and is only sent to ElevenLabs."
+            "The key is stored in this phone's Keychain and is only sent to ElevenLabs."
         default:
-            "Make a key at platform.openai.com/api-keys. A restricted key needs List models: Read and Model capabilities: Request. It is stored in this phone's Keychain and is only sent to OpenAI.\n\nThis key is also used for styles and spoken instructions, whichever provider listens."
+            "The key is stored in this phone's Keychain and is only sent to OpenAI.\n\nThis key is also used for styles and spoken instructions, whichever provider listens."
         }
     }
 

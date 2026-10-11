@@ -58,7 +58,7 @@ struct SpeechModelCard: View {
 
     private var detail: String {
         switch status {
-        case .notSetUp, .ready: "On this iPhone, \(size)"
+        case .notSetUp, .ready, .preparing: "On this iPhone, \(size)"
         case .downloading(let progress): "\(SpeechModel.percent(progress)) of \(size)"
         case .failed(let why): why
         }
@@ -77,7 +77,7 @@ struct SpeechModelCard: View {
             Button("Cancel") { store.cancelDownload(Self.model) }
                 .font(HomeStyle.rowFont)
                 .frame(minHeight: HomeStyle.touchTarget)
-        case .ready:
+        case .ready, .preparing:
             EmptyView()
         }
     }

@@ -18,12 +18,15 @@ enum NetworkTests {
 final class StubProtocol: URLProtocol, @unchecked Sendable {
     nonisolated(unsafe) static var status = 200
     nonisolated(unsafe) static var body = ""
+    /// Extra headers of the canned answer.
+    nonisolated(unsafe) static var headers: [String: String] = [:]
     nonisolated(unsafe) static var lastRequest: URLRequest?
     nonisolated(unsafe) static var lastBody: Data?
 
-    static func reset(status: Int, body: String) {
+    static func reset(status: Int, body: String, headers: [String: String] = [:]) {
         self.status = status
         self.body = body
+        self.headers = headers
         lastRequest = nil
         lastBody = nil
     }
@@ -36,7 +39,7 @@ final class StubProtocol: URLProtocol, @unchecked Sendable {
         Self.lastBody = request.httpBody ?? request.httpBodyStream.map(Self.read)
         let response = HTTPURLResponse(
             url: request.url!, statusCode: Self.status, httpVersion: "HTTP/1.1",
-            headerFields: ["Content-Type": "application/json"])!
+            headerFields: Self.headers.merging(["Content-Type": "application/json"]) { _, ours in ours })!
         client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
         client?.urlProtocol(self, didLoad: Data(Self.body.utf8))
         client?.urlProtocolDidFinishLoading(self)

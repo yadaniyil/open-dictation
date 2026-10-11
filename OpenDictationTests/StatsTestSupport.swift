@@ -36,10 +36,10 @@ extension DictationRecord {
     /// Half a minute of speech that took three seconds to become 60 words, unless said otherwise.
     static func sample(
         _ date: String, _ provider: SpeechModel = .openAI, audio: Double = 30, speech: Double = 3,
-        text: Double? = nil, words: Int = 60, input: Int? = nil, output: Int? = nil
+        text: Double? = nil, words: Int = 60, input: Int? = nil, output: Int? = nil, dollars: Double? = nil
     ) -> DictationRecord {
         DictationRecord(
             date: StatsTestSupport.date(date), provider: provider, audioSeconds: audio, speechSeconds: speech,
-            textSeconds: text, words: words, inputTokens: input, outputTokens: output)
+            textSeconds: text, words: words, inputTokens: input, outputTokens: output, speechDollars: dollars)
     }
 }

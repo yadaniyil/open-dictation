@@ -62,6 +62,14 @@ struct WhisperEngine: LocalSpeechEngine {
         try FileManager.default.removeItem(at: folder)
     }
 
+    /// WhisperKit's prewarm loads the three parts one after the other and drops each at once, so
+    /// the memory needed is that of the biggest part and not of all three. With `load` off nothing
+    /// is loaded a second time to stay.
+    func prepare() async throws {
+        guard isDownloaded else { throw LocalSpeechError.notDownloaded }
+        _ = try await WhisperKit(config(prewarm: true, load: false))
+    }
+
     func transcribe(fileURL: URL, languageCode: String) async throws -> String {
         guard isDownloaded else { throw LocalSpeechError.notDownloaded }
         // WhisperKit quietly treats a code it does not know as English. Detecting is the better guess.
@@ -130,14 +138,14 @@ struct WhisperEngine: LocalSpeechEngine {
     }
 
     /// Everything stays inside `folder`, so nothing is fetched while transcribing.
-    private func config(prewarm: Bool) -> WhisperKitConfig {
+    private func config(prewarm: Bool, load: Bool = true) -> WhisperKitConfig {
         WhisperKitConfig(
             modelFolder: modelFolder.path,
             tokenizerFolder: folder,
             computeOptions: Self.compute,
             verbose: false,
             prewarm: prewarm,
-            load: true,
+            load: load,
             download: false)
     }
 

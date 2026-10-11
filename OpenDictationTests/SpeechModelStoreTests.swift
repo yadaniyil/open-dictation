@@ -19,7 +19,8 @@ struct SpeechModelStoreTests {
             engines: [.parakeetV3: parakeet, .whisperLargeTurbo: whisper],
             selected: selected,
             hasKey: { [world] in world.keys.contains($0) },
-            save: { [world] in world.remembered = $0 })
+            save: { [world] in world.remembered = $0 },
+            prepared: .scratch())
     }
 
     /// Progress hops threads before it shows, so a test has to give it a moment.
@@ -36,7 +37,8 @@ struct SpeechModelStoreTests {
             engines: [.parakeetV3: FakeSpeechEngine(downloaded: true), .whisperLargeTurbo: whisper],
             selected: .openAI,
             hasKey: { $0 == .openAI },
-            save: { _ in })
+            save: { _ in },
+            prepared: .scratch())
 
         #expect(store.status(of: .openAI) == .ready)
         #expect(store.status(of: .elevenLabs) == .notSetUp)
@@ -153,7 +155,8 @@ struct SpeechModelStoreTests {
             engines: [.parakeetV3: downloaded],
             selected: .parakeetV3,
             hasKey: { _ in false },
-            save: { [world] in world.remembered = $0 })
+            save: { [world] in world.remembered = $0 },
+            prepared: .scratch())
         #expect(store.selected == .parakeetV3)
 
         store.delete(.parakeetV3)
@@ -210,6 +213,7 @@ struct SpeechModelDisplayTests {
         #expect(SpeechModel.parakeetV3.statusText(.ready) == "Downloaded")
         #expect(SpeechModel.whisperLargeTurbo.statusText(.notSetUp) == "Not downloaded")
         #expect(SpeechModel.parakeetV3.statusText(.downloading(progress: 0.429)) == "Downloading 42%")
+        #expect(SpeechModel.whisperLargeTurbo.statusText(.preparing) == "Preparing")
         #expect(SpeechModel.parakeetV3.statusText(.failed("No space left.")) == "No space left.")
     }
 
@@ -219,7 +223,9 @@ struct SpeechModelDisplayTests {
         #expect(SpeechModel.parakeetV3.kind == "On this iPhone · 494 MB")
         #expect(SpeechModel.openAI.makeEngine() == nil)
         #expect(SpeechModel.elevenLabs.makeEngine() == nil)
-        #expect(SpeechModel.parakeetV3.makeEngine() is ParakeetEngine)
+        // Wrapped, so that it waits its turn with the other model.
+        #expect(SpeechModel.parakeetV3.makeEngine() is OneAtATime<ParakeetEngine>)
+        #expect(SpeechModel.whisperLargeTurbo.makeEngine() is OneAtATime<WhisperEngine>)
     }
 
     @Test func wordsToGetRightAreCounted() {

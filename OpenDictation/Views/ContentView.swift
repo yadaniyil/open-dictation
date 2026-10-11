@@ -35,6 +35,8 @@ struct ContentView: View {
                         // First, because a download takes a while and can run during the steps.
                         if !speechModels.canListen {
                             SpeechModelCard(store: speechModels) { settings = SettingsSheet() }
+                        } else if speechModels.isPreparing {
+                            PreparingCard()
                         }
                         if isSetUp {
                             ReadyCard(guide: guide) { withAnimation { isSetUp = false } }
@@ -53,6 +55,8 @@ struct ContentView: View {
                             RecentTexts(history: controller.history)
                         }
                     }
+                    // The card comes and goes by itself, so the rest makes room gently.
+                    .animation(.default, value: speechModels.isPreparing)
                 }
                 .padding(.horizontal, HomeStyle.sideMargin)
                 .padding(.top, HomeStyle.topMargin)

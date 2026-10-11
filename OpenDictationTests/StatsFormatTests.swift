@@ -52,31 +52,4 @@ struct StatsFormatTests {
         #expect(StatsFormat.split(Pricing.Cost(openAI: 2.5, elevenLabs: 0)) == nil)
         #expect(StatsFormat.split(Pricing.Cost()) == nil)
     }
-
-    @Test(arguments: [
-        (0.4, "under a second"),
-        (1.0, "1 second"),
-        (1.4, "1 second"),
-        (1.6, "2 seconds"),
-        (9.2, "9 seconds"),
-        (89.0, "89 seconds"),
-        (90.0, "2 minutes"),
-        (200.0, "3 minutes"),
-    ] as [(Double, String)])
-    func aWaitIsSaidInWholeSecondsOrMinutes(seconds: Double, expected: String) {
-        #expect(StatsFormat.wait(seconds) == expected)
-    }
-
-    @Test func speedIsOnePlainLine() {
-        #expect(StatsFormat.speedSentence(secondsPerMinute: 9.2) == "A minute of speech takes about 9 seconds")
-        #expect(StatsFormat.speedSentence(secondsPerMinute: 1) == "A minute of speech takes about 1 second")
-        #expect(StatsFormat.speedSentence(secondsPerMinute: 0.6) == "A minute of speech takes under a second")
-        #expect(StatsFormat.speedSentence(secondsPerMinute: nil) == "Not measured yet")
-    }
-
-    @Test func speedAsAValueStartsWithACapitalOrANumber() {
-        #expect(StatsFormat.speed(secondsPerMinute: 21.4) == "21 seconds")
-        #expect(StatsFormat.speed(secondsPerMinute: 0.3) == "Under a second")
-        #expect(StatsFormat.speed(secondsPerMinute: nil) == "Not measured yet")
-    }
 }

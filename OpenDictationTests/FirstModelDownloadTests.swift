@@ -17,7 +17,8 @@ struct FirstModelDownloadTests {
             engines: [.parakeetV3: parakeet, .whisperLargeTurbo: FakeSpeechEngine()],
             selected: .openAI,
             hasKey: { openAIKey && $0 == .openAI },
-            save: { _ in })
+            save: { _ in },
+            prepared: .scratch())
     }
 
     private func start(

@@ -10,10 +10,18 @@ struct OpenAITranscriber: Sendable {
         var vocabulary: String = ""
     }
 
+    /// What a transcription gives back.
+    struct Reply: Equatable, Sendable {
+        let text: String
+        /// The seconds of speech OpenAI says it billed, rounded up by OpenAI to a whole second.
+        /// Nil when it did not say. It feeds the cost in the user's own stats.
+        let billedSeconds: Double?
+    }
+
     var baseURL: URL = AppSettings.apiBaseURL
     var session: URLSession = .shared
 
-    func transcribe(fileURL: URL, apiKey: String, options: Options) async throws -> String {
+    func transcribe(fileURL: URL, apiKey: String, options: Options) async throws -> Reply {
         let audio = try Data(contentsOf: fileURL)
         let boundary = "od-\(UUID().uuidString)"
 
@@ -34,7 +42,7 @@ struct OpenAITranscriber: Sendable {
         }
         let text = decoded.text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { throw OpenAIError.noSpeech }
-        return text
+        return Reply(text: text, billedSeconds: decoded.usage?.seconds)
     }
 
     // MARK: - Request building
@@ -60,6 +68,11 @@ struct OpenAITranscriber: Sendable {
     }
 
     private struct TranscriptionResponse: Decodable {
+        /// Older models count tokens here and leave `seconds` out.
+        struct Usage: Decodable {
+            let seconds: Double?
+        }
         let text: String
+        let usage: Usage?
     }
 }
