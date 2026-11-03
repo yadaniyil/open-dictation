@@ -64,7 +64,7 @@ final class DictationController {
     private var closingActivityTask: Task<Void, Never>?
     private var limitTask: Task<Void, Never>?
     private var interruptionObserver: (any NSObjectProtocol)?
-    private var pendingClipboard: (text: String, date: Date)?
+    private var clipboardRetry: ClipboardRetry?
     private let unsent = UnsentRecording.standard
 
     private init() {
@@ -198,11 +198,11 @@ final class DictationController {
     /// iOS can ignore a clipboard write made from the background, so a fresh result is copied
     /// again when the app comes to the front.
     func appBecameActive() {
-        guard let pending = pendingClipboard else { return }
-        pendingClipboard = nil
+        guard let retry = clipboardRetry else { return }
+        clipboardRetry = nil
         // An old result must not replace something the user copied since.
-        if pending.date.timeIntervalSinceNow > -120 {
-            UIPasteboard.general.string = pending.text
+        if retry.shouldCopyAgain(now: Date(), changeCount: UIPasteboard.general.changeCount) {
+            UIPasteboard.general.string = retry.text
         }
     }
 
@@ -293,7 +293,7 @@ final class DictationController {
     private func copyToClipboard(_ text: String) {
         UIPasteboard.general.string = text
         if UIApplication.shared.applicationState != .active {
-            pendingClipboard = (text, Date())
+            clipboardRetry = ClipboardRetry(text: text, date: Date(), changeCount: UIPasteboard.general.changeCount)
         }
     }
 
