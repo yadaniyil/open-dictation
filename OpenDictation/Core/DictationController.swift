@@ -65,9 +65,11 @@ final class DictationController {
     private var limitTask: Task<Void, Never>?
     private var interruptionObserver: (any NSObjectProtocol)?
     private var pendingClipboard: (text: String, date: Date)?
+    private let unsent = UnsentRecording.standard
 
     private init() {
-        hasUnsentRecording = FileManager.default.fileExists(atPath: Self.unsentURL.path)
+        // A recording still in the works belongs to a run that iOS ended before its text was out.
+        hasUnsentRecording = unsent.recoverAfterLaunch()
         // A Live Activity left over from a run that was killed would show a timer that never stops.
         for stale in Activity<DictationActivityAttributes>.activities.map(LiveActivity.init) {
             Task { await stale.end() }
@@ -159,6 +161,10 @@ final class DictationController {
 
     /// Stops listening, turns the recording into text and puts it on the clipboard.
     func finish() async throws -> String {
+        // Asked for before the microphone lets go: once it has, nothing else keeps the app awake
+        // in the background, as after the time limit or a phone call.
+        let background = BackgroundTime("finish")
+        defer { background.end() }
         guard case .recording(let startedAt) = phase, let recording = recorder.stop() else {
             throw DictationError.notRecording
         }
@@ -171,19 +177,21 @@ final class DictationController {
         }
 
         phase = .transcribing
+        // Out of the temporary folder first, so the recording outlives an app that iOS ends meanwhile.
+        let fileURL = unsent.takeIn(recording.url)
         await updateActivity(.transcribing, startedAt: startedAt)
-        return try await transcribe(recording.url, startedAt: startedAt)
+        return try await transcribe(fileURL, startedAt: startedAt)
     }
 
     /// Tries the recording that failed last time again, with the model that is picked now.
     func retryUnsent() async {
         guard phase == .idle, hasUnsentRecording else { return }
         phase = .transcribing
-        _ = try? await transcribe(Self.unsentURL, startedAt: Date())
+        _ = try? await transcribe(unsent.url, startedAt: Date())
     }
 
     func discardUnsent() {
-        try? FileManager.default.removeItem(at: Self.unsentURL)
+        unsent.discard()
         hasUnsentRecording = false
     }
 
@@ -202,8 +210,8 @@ final class DictationController {
 
     private func transcribe(_ fileURL: URL, startedAt: Date) async throws -> String {
         // Keeps the app awake for the upload, or the on-device model, after the microphone has let go.
-        let background = UIApplication.shared.beginBackgroundTask(withName: "transcribe")
-        defer { UIApplication.shared.endBackgroundTask(background) }
+        let background = BackgroundTime("transcribe")
+        defer { background.end() }
 
         do {
             let apiKey = AppSettings.apiKey
@@ -264,7 +272,7 @@ final class DictationController {
             } else {
                 try? FileManager.default.removeItem(at: fileURL)
             }
-            if fileURL == Self.unsentURL { hasUnsentRecording = false }
+            if fileURL == unsent.url { hasUnsentRecording = false }
 
             phase = .idle
             lastMessage = .copied(note: note)
@@ -274,7 +282,7 @@ final class DictationController {
             switch error {
             case OpenAIError.noSpeech, ElevenLabsError.noSpeech, LocalSpeechError.noSpeech:
                 try? FileManager.default.removeItem(at: fileURL)
-                if fileURL == Self.unsentURL { hasUnsentRecording = false }
+                if fileURL == unsent.url { hasUnsentRecording = false }
             default:
                 keepForRetry(fileURL)
             }
@@ -297,21 +305,7 @@ final class DictationController {
     }
 
     private func keepForRetry(_ fileURL: URL) {
-        guard fileURL != Self.unsentURL else { return }
-        let manager = FileManager.default
-        try? manager.createDirectory(
-            at: Self.unsentURL.deletingLastPathComponent(), withIntermediateDirectories: true)
-        try? manager.removeItem(at: Self.unsentURL)
-        do {
-            try manager.moveItem(at: fileURL, to: Self.unsentURL)
-            hasUnsentRecording = true
-        } catch {
-            hasUnsentRecording = manager.fileExists(atPath: Self.unsentURL.path)
-        }
-    }
-
-    private static var unsentURL: URL {
-        URL.applicationSupportDirectory.appendingPathComponent("unsent.m4a")
+        hasUnsentRecording = unsent.keepForRetry(fileURL)
     }
 
     /// Waits for `task`, but only for so long. The task itself keeps running either way.
@@ -372,13 +366,13 @@ final class DictationController {
         await activity.update(state)
 
         closingActivityTask = Task { [weak self] in
-            let background = UIApplication.shared.beginBackgroundTask(withName: "close-activity")
+            let background = BackgroundTime("close-activity")
             try? await Task.sleep(for: .seconds(3))
             if !Task.isCancelled, self?.activity?.id == activity.id {
                 self?.activity = nil
                 await activity.end()
             }
-            UIApplication.shared.endBackgroundTask(background)
+            background.end()
         }
     }
 
@@ -404,6 +398,28 @@ private struct LiveActivity: @unchecked Sendable {
 
     func end() async {
         await activity.end(nil, dismissalPolicy: .immediate)
+    }
+}
+
+/// Time iOS gives the app to finish something after it has left the screen. When that time runs
+/// out, the request is ended, which lets iOS suspend the app. A request that is never ended gets
+/// the app killed, and the work with it.
+@MainActor
+private final class BackgroundTime {
+    private var id = UIBackgroundTaskIdentifier.invalid
+
+    init(_ name: String) {
+        id = UIApplication.shared.beginBackgroundTask(withName: name) { [weak self] in
+            // iOS calls this on the main thread.
+            MainActor.assumeIsolated { self?.end() }
+        }
+    }
+
+    /// Safe to call more than once.
+    func end() {
+        guard id != .invalid else { return }
+        UIApplication.shared.endBackgroundTask(id)
+        id = .invalid
     }
 }
 
