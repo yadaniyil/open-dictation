@@ -47,9 +47,20 @@ enum FirstModelDownload {
     }
 
     /// iOS stops a download soon after the app leaves the screen, and setting up the shortcut
-    /// means leaving. A stopped download keeps its files, so this carries on from there.
-    static func resumeIfInterrupted(store: SpeechModelStore = .shared) {
-        guard !store.canListen, case .failed = store.status(of: model) else { return }
+    /// means leaving. A stopped download keeps its files, so this carries on from there. Only on
+    /// Wi-Fi or the like, as for the first start: what is left can still be hundreds of MB, and
+    /// by now the phone may be on mobile data. Elsewhere the main screen's "Try again" stays.
+    static func resumeIfInterrupted(
+        store: SpeechModelStore = .shared,
+        isOnCheapNetwork: () async -> Bool = { await FirstModelDownload.isOnCheapNetwork() }
+    ) async {
+        func isWanted() -> Bool {
+            guard !store.canListen, case .failed = store.status(of: model) else { return false }
+            return true
+        }
+        guard isWanted(), await isOnCheapNetwork() else { return }
+        // The answer took a moment: look again before starting.
+        guard isWanted() else { return }
         store.download(model)
     }
 

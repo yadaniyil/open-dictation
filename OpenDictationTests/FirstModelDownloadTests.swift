@@ -90,6 +90,56 @@ struct FirstModelDownloadTests {
         #expect(store.status(of: .parakeetV3) == .notSetUp)
     }
 
+    // MARK: - Carrying on after iOS stopped it
+
+    private static let stopped = SpeechModelStore.Status.failed("The network connection was lost.")
+
+    /// iOS stops a download soon after the app leaves the screen. It keeps its files.
+    private func stopHalfway(_ store: SpeechModelStore) async {
+        parakeet.plan(steps: [0.3], failure: .failed("The network connection was lost."))
+        await store.download(.parakeetV3)?.value
+        parakeet.plan(steps: [1])
+    }
+
+    private func resume(_ store: SpeechModelStore, onWiFi: Bool) async {
+        await FirstModelDownload.resumeIfInterrupted(store: store, isOnCheapNetwork: { onWiFi })
+    }
+
+    @Test func aStoppedDownloadCarriesOnByItselfOnWiFi() async {
+        let store = makeStore()
+        await stopHalfway(store)
+        #expect(store.status(of: .parakeetV3) == Self.stopped)
+
+        await resume(store, onWiFi: true)
+        await waitUntilReady(store)
+
+        #expect(store.status(of: .parakeetV3) == .ready)
+        #expect(store.selected == .parakeetV3)
+    }
+
+    /// What is left can still be hundreds of MB. On mobile data the "Try again" button stays.
+    @Test func aStoppedDownloadDoesNotCarryOnOverMobileData() async {
+        let store = makeStore()
+        await stopHalfway(store)
+
+        await resume(store, onWiFi: false)
+        #expect(store.status(of: .parakeetV3) == Self.stopped)
+
+        // Later, on Wi-Fi, it does.
+        await resume(store, onWiFi: true)
+        await waitUntilReady(store)
+        #expect(store.status(of: .parakeetV3) == .ready)
+    }
+
+    @Test func aStoppedDownloadIsLeftAloneOnceSomethingElseCanListen() async {
+        let store = makeStore(openAIKey: true)
+        await stopHalfway(store)
+
+        await resume(store, onWiFi: true)
+
+        #expect(store.status(of: .parakeetV3) == Self.stopped)
+    }
+
     @Test func itStartsByItselfOnlyOnWiFiWithRoomToSpare() {
         let room = FirstModelDownload.neededBytes
         #expect(FirstModelDownload.shouldStart(freeBytes: room, isOnCheapNetwork: true))
