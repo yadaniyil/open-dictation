@@ -74,8 +74,10 @@ struct ElevenLabsTranscriber: Sendable {
 
     /// Form fields in order. The "Words to get right" setting is left out on purpose:
     /// ElevenLabs takes such words as `keyterms` and charges 20% more for them.
+    /// Sound tags are turned off: ElevenLabs can write sounds into the text as "(laughter)" or
+    /// "(footsteps)", and they are not speech. The same goes for Whisper's, see `WhisperEngine.clean`.
     static func fields(languageCode: String) -> [(name: String, value: String)] {
-        var fields = [(name: "model_id", value: model)]
+        var fields = [(name: "model_id", value: model), (name: "tag_audio_events", value: "false")]
         let language = languageCode.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         if !language.isEmpty { fields.append((name: "language_code", value: language)) }
         return fields

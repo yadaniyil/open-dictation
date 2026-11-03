@@ -35,6 +35,8 @@ extension NetworkTests {
             #expect(request.value(forHTTPHeaderField: "Authorization") == nil)
             let body = String(decoding: try #require(StubProtocol.lastBody), as: UTF8.self)
             #expect(body.contains("name=\"model_id\"\r\n\r\nscribe_v2\r\n"))
+            // Sounds such as "(laughter)" are not speech, so they are not to come back in the text.
+            #expect(body.contains("name=\"tag_audio_events\"\r\n\r\nfalse\r\n"))
             #expect(body.contains("name=\"file\"; filename=\"test-"))
             #expect(body.contains("Content-Type: audio/mp4\r\n\r\nfake-audio"))
             // No language was picked, so ElevenLabs detects it. Key terms cost extra and are never sent.
@@ -65,7 +67,7 @@ extension NetworkTests {
 
             let body = String(decoding: try #require(StubProtocol.lastBody), as: UTF8.self)
             #expect(body.contains("name=\"language_code\"\r\n\r\npl\r\n"))
-            #expect(ElevenLabsTranscriber.fields(languageCode: "").map(\.name) == ["model_id"])
+            #expect(ElevenLabsTranscriber.fields(languageCode: "").map(\.name) == ["model_id", "tag_audio_events"])
         }
 
         @Test func keyWithoutThePermissionSaysSo() async throws {
