@@ -22,10 +22,16 @@ No changes to signing, store metadata, release config or secrets. No new depende
 
 ## In progress
 
-- Running the Foundation-only parts and their tests on Linux with Swift 6.3, through a scratch
-  package that copies the files and stubs out UIKit, Network, os and the two model libraries.
-  It is not in the repo. The network tests do not build there yet (Linux needs
-  `FoundationNetworking`).
+Nothing. Draft PR: https://github.com/yadaniyil/open-dictation/pull/1
+
+Checked on Linux with Swift 6.3, in a scratch package outside the repo that copies the
+Foundation-only files and stands in for UIKit, Network, os, ActivityKit, AVFoundation and the
+two model libraries:
+- 96 tests in 18 suites pass: all new tests, plus the existing store, preparation, turn-taking,
+  network (OpenAI, ElevenLabs), rewriter, archive and token tests.
+- Each fix was undone in turn; its test then failed.
+- `DictationController.swift` type-checks in Swift 6 mode with each plausible annotation of
+  `beginBackgroundTask`'s expiration handler.
 
 ## Next steps
 
