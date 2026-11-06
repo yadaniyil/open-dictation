@@ -215,15 +215,29 @@ struct ModelPreparationTests {
         #expect(parakeet.preparations == 0)
     }
 
-    @Test func lowSpaceKeepsTheExtraLoadAway() {
+    @Test func lowSpaceKeepsABackgroundWindowAway() {
+        world.isInFront = false
         world.freeBytes = 300_000_000
         let store = makeStore()
 
-        #expect(store.prepareIfNeeded() == nil)
         #expect(store.prepareIfNeeded(.chargingWindow) == nil)
         #expect(store.status(of: .parakeetV3) == .ready)
         #expect(parakeet.preparations == 0)
         #expect(notes.needsPreparing(.parakeetV3))
+        // The load is still ahead, so a later window is still wanted.
+        #expect(store.needsChargingWindow)
+    }
+
+    @Test func openingTheAppPreparesEvenWhenSpaceIsLow() async {
+        // 1.2 GB free after an update: opening the app still takes the slow load, as before the
+        // background window existed, so the next dictation from the Action Button is quick.
+        world.freeBytes = 1_200_000_000
+        let store = makeStore()
+
+        await store.prepareIfNeeded()?.value
+        #expect(parakeet.preparations == 1)
+        #expect(!notes.needsPreparing(.parakeetV3))
+        #expect(!store.needsChargingWindow)
     }
 
     @Test func aDictationStartGetsTheSlowLoadGoingWhileTheUserTalks() async throws {

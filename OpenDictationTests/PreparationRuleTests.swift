@@ -68,12 +68,43 @@ struct PreparationRuleTests {
         #expect(decide(.dictationStarted, isInFront: false) == .prepare)
     }
 
-    @Test func lowSpaceStopsAnExtraLoad() {
+    @Test func lowSpaceOnlyStopsABackgroundWindow() {
         let tight = Rule.neededFreeBytes - 1
-        #expect(decide(.appInFront, freeBytes: tight) == .skip(.lowStorage))
         #expect(decide(.chargingWindow, freeBytes: tight) == .skip(.lowStorage))
-        #expect(decide(.appInFront, freeBytes: Rule.neededFreeBytes) == .prepare)
+        #expect(decide(.chargingWindow, freeBytes: Rule.neededFreeBytes) == .prepare)
+        // With the app open the user sees it, as before the background window existed. Skipping
+        // here would leave the slow load for the next dictation from the Action Button.
+        #expect(decide(.appInFront, freeBytes: tight) == .prepare)
         // A dictation loads the model anyway, so starting that load sooner needs no extra room.
         #expect(decide(.dictationStarted, freeBytes: tight) == .prepare)
+    }
+
+    @Test func theAppOpenNeverAsksForSpace() {
+        var askedForSpace = false
+        let decision = Rule.decide(
+            .appInFront, status: .ready, needsPreparing: true, isBusy: false, isInFront: true,
+            freeBytes: { askedForSpace = true; return 0 })
+
+        #expect(decision == .prepare)
+        #expect(!askedForSpace)
+    }
+
+    // MARK: - Asking iOS for a window
+
+    @Test func aWindowIsAskedForOnlyWhenTheSlowLoadIsAhead() {
+        #expect(Rule.needsWindow(status: .ready, needsPreparing: true))
+        // Under way now, but iOS may suspend the app before it ends.
+        #expect(Rule.needsWindow(status: .preparing, needsPreparing: true))
+    }
+
+    /// The negative cases: a cloud model, one that is not on the phone, and one already
+    /// prepared on this version get no window.
+    @Test func noWorkMeansNoWindow() {
+        #expect(!Rule.needsWindow(status: nil, needsPreparing: true))
+        #expect(!Rule.needsWindow(status: .ready, needsPreparing: false))
+        #expect(!Rule.needsWindow(status: .preparing, needsPreparing: false))
+        for status in [SpeechModelStore.Status.notSetUp, .downloading(progress: 0.4), .failed("Network lost.")] {
+            #expect(!Rule.needsWindow(status: status, needsPreparing: true))
+        }
     }
 }

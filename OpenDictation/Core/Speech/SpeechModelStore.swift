@@ -222,6 +222,15 @@ final class SpeechModelStore {
         return task
     }
 
+    /// Whether a background window while the phone charges has work waiting: the model in use
+    /// still has its slow first load on this version ahead (`PreparationRule.needsWindow`).
+    var needsChargingWindow: Bool {
+        let model = selected
+        return PreparationRule.needsWindow(
+            status: engines[model] == nil ? nil : status(of: model),
+            needsPreparing: prepared.needsPreparing(model))
+    }
+
     private static func seconds(since start: ContinuousClock.Instant) -> Double {
         let took = ContinuousClock.now - start
         return Double(took.components.seconds) + Double(took.components.attoseconds) / 1e18

@@ -19,8 +19,9 @@ struct OpenDictationApp: App {
         }
         .onChange(of: scenePhase) {
             if scenePhase == .background {
-                // So that a window is waiting when the next update comes.
-                BackgroundPreparation.ask()
+                // When the model in use still has its slow first load ahead (the app left the
+                // screen before it ended), a window while the phone charges finishes it.
+                BackgroundPreparation.askIfNeeded()
             }
             guard scenePhase == .active else { return }
             DictationController.shared.appBecameActive()

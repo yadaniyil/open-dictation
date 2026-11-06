@@ -9,9 +9,12 @@ import Foundation
 /// - its note says it was last loaded on another build, install or iOS (`PreparedModels`);
 /// - no other preparation and no download is under way;
 /// - and, depending on the moment:
-///   - the app came to the front: it is still on the screen, and the phone has room;
+///   - the app came to the front: it is still on the screen. No room is asked for: the user is
+///     there to see it, and a phone short on space would otherwise keep the slow load for the
+///     next dictation;
 ///   - iOS gave the app a background window: those only come while the phone charges (the
-///     request asks for that), and the phone has room;
+///     request asks for that), and the phone has room. Nobody is looking, so iOS's extra copy of
+///     the model is not written onto a phone that is nearly full;
 ///   - a dictation started: always. That dictation loads the model anyway; this only starts the
 ///     load while the user is still talking instead of after Stop, so no room is asked for.
 enum PreparationRule {
@@ -35,7 +38,7 @@ enum PreparationRule {
         case lowStorage = "the phone is low on space"
     }
 
-    /// Room to ask for before an extra load: iOS writes its own copy of the model into the app's
+    /// Room a background window asks for: iOS writes its own copy of the model into the app's
     /// Caches folder while it prepares it, a new one for every install. Parakeet's copy was
     /// 1.19 GB in the Simulator (CPU, 2026-11-06); the iPhone's Neural Engine copy is not measured.
     static let neededFreeBytes: Int64 = 1_500_000_000
@@ -64,12 +67,21 @@ enum PreparationRule {
         switch moment {
         case .appInFront:
             guard isInFront else { return .skip(.notInFront) }
-            guard freeBytes() >= neededFreeBytes else { return .skip(.lowStorage) }
         case .chargingWindow:
             guard freeBytes() >= neededFreeBytes else { return .skip(.lowStorage) }
         case .dictationStarted:
             break
         }
         return .prepare
+    }
+
+    /// Whether a background window is worth asking iOS for: the model in use runs on the phone,
+    /// is downloaded, and its slow first load on this version is still ahead, or under way,
+    /// which iOS may cut short. Room is looked at when the window comes.
+    static func needsWindow(status: SpeechModelStore.Status?, needsPreparing: Bool) -> Bool {
+        switch status {
+        case .ready, .preparing: needsPreparing
+        case nil, .notSetUp, .downloading, .failed: false
+        }
     }
 }

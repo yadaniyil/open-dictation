@@ -157,9 +157,10 @@ final class DictationController {
             // while the user talks, it takes that much off the wait after Stop. Only when that
             // load is still ahead; otherwise this does nothing.
             speechModels.prepareIfNeeded(.dictationStarted)
-            // So that a background window is waiting when the next update comes, also for
-            // someone who only ever dictates from the Action Button.
-            BackgroundPreparation.askSoon()
+            // iOS may suspend the app before that load ends. Then a window while the phone
+            // charges finishes it, also for someone who only dictates from the Action Button.
+            // Asked for only when there is such a load ahead.
+            BackgroundPreparation.askIfNeeded(store: speechModels)
         } catch {
             lastMessage = .failed(error.localizedDescription)
             throw error

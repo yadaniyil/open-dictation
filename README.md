@@ -44,7 +44,7 @@ The full policy is in [PRIVACY.md](PRIVACY.md).
 
 On a new iPhone the app downloads Parakeet V3 by itself after the welcome pages, on Wi-Fi only, and uses it. To change, pick one in Settings and tap "Use for dictation". After that first time, saving a key or finishing a download never switches by itself.
 
-After an update of the app or of iOS, the iPhone has to prepare an on-device model again. That takes from half a minute to a few minutes. The app does it by itself, once: when you open it (it shows "Preparing the speech model" meanwhile), or in the background while the iPhone charges, when iOS allows it. If you dictate before either has happened, the app starts preparing the moment you start talking, so that dictation waits less, but it can still take longer than usual. Opening the app once after an update is the surest way.
+After an update of the app or of iOS, the iPhone has to prepare an on-device model again. That takes from half a minute to a few minutes. The app does it by itself, once: when you open it (it shows "Preparing the speech model" meanwhile), or, if you dictate first, the moment you start talking, so that dictation waits less, but it can still take longer than usual. When iOS stops the app before it is done, the app finishes in the background while the iPhone charges, when iOS allows it. Opening the app once after an update is the surest way.
 
 ### OpenAI key
 
