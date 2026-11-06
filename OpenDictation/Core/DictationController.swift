@@ -153,6 +153,13 @@ final class DictationController {
             phase = .recording(startedAt: startedAt)
             lastMessage = nil
             scheduleLimit()
+            // After an update the first load of an on-device model is the slow one. Started now,
+            // while the user talks, it takes that much off the wait after Stop. Only when that
+            // load is still ahead; otherwise this does nothing.
+            speechModels.prepareIfNeeded(.dictationStarted)
+            // So that a background window is waiting when the next update comes, also for
+            // someone who only ever dictates from the Action Button.
+            BackgroundPreparation.askSoon()
         } catch {
             lastMessage = .failed(error.localizedDescription)
             throw error

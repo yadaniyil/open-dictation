@@ -2,14 +2,15 @@ import Foundation
 import Testing
 @testable import OpenDictation
 
-/// After an update the store loads the model in use once, with the app open, so that the slow
-/// first load does not land on a dictation.
+/// After an update the store loads the model in use once, ahead of the next dictation, so that
+/// the slow first load does not land on one.
 @MainActor
 struct ModelPreparationTests {
-    /// Whether the app is on the screen, and which keys are saved.
+    /// Whether the app is on the screen, which keys are saved, and how much room the phone has.
     private final class World {
         var isInFront = true
         var keys: Set<SpeechModel> = []
+        var freeBytes: Int64 = 20_000_000_000
     }
 
     private let world = World()
@@ -18,14 +19,15 @@ struct ModelPreparationTests {
     /// Nothing has been prepared yet, as after an update.
     private let notes = PreparedModels.scratch()
 
-    private func makeStore(selected: SpeechModel = .parakeetV3) -> SpeechModelStore {
+    private func makeStore(selected: SpeechModel = .parakeetV3, notes: PreparedModels? = nil) -> SpeechModelStore {
         SpeechModelStore(
             engines: [.parakeetV3: parakeet, .whisperLargeTurbo: whisper],
             selected: selected,
             hasKey: { [world] in world.keys.contains($0) },
             save: { _ in },
-            prepared: notes,
-            isInFront: { [world] in world.isInFront })
+            prepared: notes ?? self.notes,
+            isInFront: { [world] in world.isInFront },
+            freeBytes: { [world] in world.freeBytes })
     }
 
     /// A preparation that was started by something else has to be given a moment to show.
@@ -157,6 +159,100 @@ struct ModelPreparationTests {
         await wait { !notes.needsPreparing(.whisperLargeTurbo) }
         #expect(whisper.preparations == 1)
         #expect(!notes.needsPreparing(.parakeetV3))
+    }
+
+    // MARK: - After an update
+
+    @Test func anAppUpdatePreparesTheModelAgainAndThenNeverAgain() async throws {
+        // The same phone's notes, read by build 9 and then by build 10.
+        let defaults = try #require(UserDefaults(suiteName: "ModelPreparationTests.\(UUID().uuidString)"))
+        func notes(build: String) -> PreparedModels {
+            PreparedModels(defaults: defaults, stamp: PreparedModels.stamp(appBuild: build, install: "/A", system: "26.1"))
+        }
+        notes(build: "9").markPrepared(.parakeetV3)
+
+        // Build 9 again: the same version, so no work.
+        #expect(makeStore(notes: notes(build: "9")).prepareIfNeeded() == nil)
+        #expect(parakeet.preparations == 0)
+
+        // Build 10 is installed over it: the version changed, so the model is loaded once more.
+        await makeStore(notes: notes(build: "10")).prepareIfNeeded()?.value
+        #expect(parakeet.preparations == 1)
+
+        // Build 10's next launches leave it alone.
+        #expect(makeStore(notes: notes(build: "10")).prepareIfNeeded() == nil)
+        #expect(parakeet.preparations == 1)
+    }
+
+    @Test func aChargingWindowPreparesWithTheAppInTheBackground() async {
+        world.isInFront = false
+        let store = makeStore()
+        #expect(store.prepareIfNeeded() == nil)
+
+        await store.prepareIfNeeded(.chargingWindow)?.value
+        #expect(parakeet.preparations == 1)
+        #expect(!notes.needsPreparing(.parakeetV3))
+
+        // The next window finds nothing to do.
+        #expect(store.prepareIfNeeded(.chargingWindow) == nil)
+        #expect(parakeet.preparations == 1)
+    }
+
+    @Test func aChargingWindowDuringTheFirstDownloadLeavesItAlone() async {
+        world.isInFront = false
+        try? parakeet.delete()
+        parakeet.plan(steps: [0.5], waitsForRelease: true)
+        // Nothing to listen with yet: OpenAI without a key.
+        let store = makeStore(selected: .openAI)
+        let download = store.download(.parakeetV3)
+
+        #expect(store.prepareIfNeeded(.chargingWindow) == nil)
+        parakeet.release()
+        await download?.value
+        // A finished download counts as prepared, so a later window has nothing to do either.
+        #expect(store.selected == .parakeetV3)
+        #expect(store.prepareIfNeeded(.chargingWindow) == nil)
+        #expect(parakeet.preparations == 0)
+    }
+
+    @Test func lowSpaceKeepsTheExtraLoadAway() {
+        world.freeBytes = 300_000_000
+        let store = makeStore()
+
+        #expect(store.prepareIfNeeded() == nil)
+        #expect(store.prepareIfNeeded(.chargingWindow) == nil)
+        #expect(store.status(of: .parakeetV3) == .ready)
+        #expect(parakeet.preparations == 0)
+        #expect(notes.needsPreparing(.parakeetV3))
+    }
+
+    @Test func aDictationStartGetsTheSlowLoadGoingWhileTheUserTalks() async throws {
+        // From the Action Button: the app is in the background, and the phone is nearly full,
+        // which does not matter here because the dictation loads the model anyway.
+        world.isInFront = false
+        world.freeBytes = 300_000_000
+        let engine = OneAtATime(parakeet, turns: ModelTurns())
+        let store = SpeechModelStore(
+            engines: [.parakeetV3: engine], selected: .parakeetV3,
+            hasKey: { _ in false }, save: { _ in }, prepared: notes,
+            isInFront: { [world] in world.isInFront }, freeBytes: { [world] in world.freeBytes })
+        let hold = Latch()
+        parakeet.planPreparing(hold: hold)
+
+        // Recording starts.
+        let preparing = try #require(store.prepareIfNeeded(.dictationStarted))
+        #expect(store.canListen)
+        // Stop: the text waits for the load that is already under way, not for a second one.
+        let inUse = try #require(store.engine)
+        let dictation = Task { try await inUse.transcribe(fileURL: URL(fileURLWithPath: "/dev/null"), languageCode: "") }
+        hold.open()
+        await preparing.value
+        #expect(try await dictation.value == "fake")
+        #expect(parakeet.events == ["prepare began", "prepare ended", "transcribe began", "transcribe ended"])
+
+        // The next dictation starts nothing extra.
+        #expect(store.prepareIfNeeded(.dictationStarted) == nil)
+        #expect(parakeet.preparations == 1)
     }
 
     // MARK: - While it runs

@@ -45,6 +45,7 @@ final class SpeechModelStore {
     private let save: (SpeechModel) -> Void
     private let prepared: PreparedModels
     private let isInFront: () -> Bool
+    private let freeBytes: () -> Int64
     private var downloads: [SpeechModel: Task<Void, Never>] = [:]
     /// The one preparation that is under way, if any.
     private var preparation: Task<Void, Never>?
@@ -56,7 +57,8 @@ final class SpeechModelStore {
     ///   - hasKey: whether a cloud model's key is saved.
     ///   - save: remembers the choice for the next launch.
     ///   - prepared: which models were loaded since the app or iOS last changed.
-    ///   - isInFront: whether the app is on the screen. A model is only prepared there.
+    ///   - isInFront: whether the app is on the screen.
+    ///   - freeBytes: how much room the phone has.
     init(
         engines: [SpeechModel: any LocalSpeechEngine] = SpeechModel.allCases.reduce(into: [:]) { $0[$1] = $1.makeEngine() },
         selected: SpeechModel = AppSettings.speechModel,
@@ -64,13 +66,15 @@ final class SpeechModelStore {
         save: @escaping (SpeechModel) -> Void = { AppSettings.speechModel = $0 },
         prepared: PreparedModels = .standard,
         // Not `== .active`: at the moment the app comes to the front iOS still calls it inactive.
-        isInFront: @escaping () -> Bool = { UIApplication.shared.applicationState != .background }
+        isInFront: @escaping () -> Bool = { UIApplication.shared.applicationState != .background },
+        freeBytes: @escaping () -> Int64 = { FirstModelDownload.freeBytes() }
     ) {
         self.engines = engines
         self.hasKey = hasKey
         self.save = save
         self.prepared = prepared
         self.isInFront = isInFront
+        self.freeBytes = freeBytes
         self.selected = selected
         statuses = SpeechModel.allCases.reduce(into: [:]) { statuses, model in
             let isReady = engines[model]?.isDownloaded ?? hasKey(model)
@@ -170,20 +174,32 @@ final class SpeechModelStore {
     // MARK: - Preparing after an update
 
     /// Loads the model in use once, when it runs on the phone and has not been loaded since the
-    /// app or iOS last changed. That first load is the slow one. Here it happens with the app
-    /// open, where the user can see it, and not during a dictation from the Action Button, which
-    /// iOS gives about 30 seconds. Call it whenever the app comes to the front; when iOS stops
-    /// the app halfway, the next call starts again. Returns the task that is under way, so a
-    /// test can wait for the end.
+    /// app or iOS last changed. That first load is the slow one, and an intent from the Action
+    /// Button only gets about 30 seconds. `PreparationRule` says when it runs: when the app comes
+    /// to the front, in a background window while the phone charges, and when a dictation starts.
+    /// When iOS stops the app halfway, nothing is written down and the next moment starts again.
+    /// Returns the task that is under way, so the caller (or a test) can wait for the end.
     @discardableResult
-    func prepareIfNeeded() -> Task<Void, Never>? {
+    func prepareIfNeeded(_ moment: PreparationRule.Moment = .appInFront) -> Task<Void, Never>? {
         let model = selected
         // One model at a time, and not next to a download, which ends by loading a model too.
-        guard preparation == nil, downloads.isEmpty, isInFront(),
-              let engine = engines[model], status(of: model) == .ready, prepared.needsPreparing(model)
-        else { return preparation }
+        let decision = PreparationRule.decide(
+            moment,
+            status: engines[model] == nil ? nil : status(of: model),
+            needsPreparing: prepared.needsPreparing(model),
+            isBusy: preparation != nil || !downloads.isEmpty,
+            isInFront: isInFront(),
+            freeBytes: freeBytes)
+        guard decision == .prepare, let engine = engines[model] else {
+            if case .skip(let reason) = decision {
+                // Low space is worth seeing in Console; the rest happens at every launch.
+                let level: OSLogType = reason == .lowStorage ? .info : .debug
+                Self.log.log(level: level, "Not preparing \(model.rawValue, privacy: .public) (\(moment.rawValue, privacy: .public)): \(reason.rawValue, privacy: .public)")
+            }
+            return preparation
+        }
         statuses[model] = .preparing
-        Self.log.info("Preparing \(model.rawValue, privacy: .public)")
+        Self.log.info("Preparing \(model.rawValue, privacy: .public) (\(moment.rawValue, privacy: .public))")
         let task = Task {
             let start = ContinuousClock.now
             do {
@@ -191,15 +207,15 @@ final class SpeechModelStore {
                 prepared.markPrepared(model)
                 Self.log.info("Prepared \(model.rawValue, privacy: .public) in \(Self.seconds(since: start), format: .fixed(precision: 1), privacy: .public) s")
             } catch {
-                // The model is as usable as before, and the next time the app comes to the
-                // front it is tried again.
+                // The model is as usable as before, and the next moment tries again.
                 Self.log.error("Could not prepare \(model.rawValue, privacy: .public) after \(Self.seconds(since: start), format: .fixed(precision: 1), privacy: .public) s: \(error.localizedDescription, privacy: .public)")
             }
             statuses[model] = .ready
             preparation = nil
             keepScreenOn()
-            // Another model may have been put in use meanwhile.
-            if selected != model { prepareIfNeeded() }
+            // Another model may have been put in use meanwhile. That happens on the screen, so
+            // only a charging window carries on as one.
+            if selected != model { prepareIfNeeded(moment == .chargingWindow ? .chargingWindow : .appInFront) }
         }
         preparation = task
         keepScreenOn()

@@ -46,6 +46,11 @@ targets:
         NSSupportsLiveActivities: true
         UIBackgroundModes:
           - audio
+          # A background window while the phone charges, to prepare the model in use after an
+          # update (BackgroundPreparation). The name must match BackgroundPreparation.identifier.
+          - processing
+        BGTaskSchedulerPermittedIdentifiers:
+          - dev.yako.open-dictation.prepare-model
         UILaunchScreen: {}
         ITSAppUsesNonExemptEncryption: false
         UISupportedInterfaceOrientations:

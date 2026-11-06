@@ -68,7 +68,8 @@ enum FirstModelDownload {
         isOnCheapNetwork && freeBytes >= neededBytes
     }
 
-    nonisolated private static func freeBytes() -> Int64 {
+    /// How much room the phone has. Also used before preparing a model.
+    nonisolated static func freeBytes() -> Int64 {
         // Asked of the app's home folder, which always exists. Application Support may not yet.
         let values = try? URL.homeDirectory.resourceValues(
             forKeys: [.volumeAvailableCapacityForImportantUsageKey, .volumeAvailableCapacityKey])
